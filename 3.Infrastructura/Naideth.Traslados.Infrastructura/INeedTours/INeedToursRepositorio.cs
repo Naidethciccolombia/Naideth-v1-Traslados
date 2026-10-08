@@ -152,7 +152,7 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             try
             {
                 var dataXml = ObjetoPeticionPreReserva(credenciales, tarifaSeleccionada);
-               
+                
                 var (xmlRespuesta, _) = await EnviarSoapAsync(idBusqueda, busqueda.Referencia, evento, "Peticion INeedTours BOOK", dataXml, credenciales, TokenCancelacion).ConfigureAwait(false);
 
                 if (xmlRespuesta == null)

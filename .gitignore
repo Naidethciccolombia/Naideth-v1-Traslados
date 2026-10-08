@@ -1,0 +1,18 @@
+﻿################################################################################
+# Este archivo .gitignore ha sido creado automáticamente por Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/Naideth-v1-Asistencias 
+
+# Build
+bin/
+obj/
+
+# Visual Studio
+.vs/
+
+# Archivos específicos
+*.dll
+*.pdb
+*.cache
+*.exe

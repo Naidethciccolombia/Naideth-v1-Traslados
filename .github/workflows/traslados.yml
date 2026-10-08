@@ -1,0 +1,89 @@
+name: Despliegue de .NET en Ubuntu
+
+on:
+  pull_request:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repositorio Naideth-v1-Traslados
+        uses: actions/checkout@v3
+        with:
+          repository: Naidethciccolombia/Naideth-v1-Traslados
+          token: ${{ secrets.TOKEN }}
+          path: ./Naideth-v1-Traslados/Naideth-v1-Traslado
+          fetch-depth: 0
+
+      - name: Clonar repositorio Naideth-v1-Central
+        run: |
+          git clone https://Naidethciccolombia:${{ secrets.TOKEN }}@github.com/Naidethciccolombia/Naideth-v1-Central.git ./Naideth-v1-Traslados/Naideth-v1-Central
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.400'
+
+      - name: Restaurar dependencias Naideth-v1-Traslados
+        run: dotnet restore ./Naideth-v1-Traslados/Naideth-v1-Traslado/Naideth-v1-Traslados.sln
+
+      - name: Restaurar dependencias Naideth-v1-Central
+        run: dotnet restore ./Naideth-v1-Traslados/Naideth-v1-Central/1.Dominio/Naideth.Central.Dominio/Naideth.Central.Dominio.csproj
+
+      - name: Compilar Naideth-v1-Traslados
+        run: dotnet build ./Naideth-v1-Traslados/Naideth-v1-Traslado/Naideth-v1-Traslados.sln --configuration Release --no-restore
+
+      - name: Ejecutar pruebas
+        run: dotnet test ./Naideth-v1-Traslados/Naideth-v1-Traslado/Naideth-v1-Traslados.sln --configuration Release --no-build --verbosity normal
+
+  publish_api_Traslados:
+    runs-on: ubuntu-latest
+    needs: [build]
+    # Solo ejecutar en PRs a master/main o en dispatch manual
+    if: github.event_name == 'workflow_dispatch' || github.base_ref == 'master' || github.base_ref == 'main'
+    steps:
+      - name: Clonar repositorio Naideth-v1-Traslados
+        uses: actions/checkout@v3
+        with:
+          repository: Naidethciccolombia/Naideth-v1-Traslados
+          token: ${{ secrets.TOKEN }}
+          path: ./Naideth-v1-Traslados/Naideth-v1-Traslado
+          fetch-depth: 0
+
+      - name: Clonar repositorio Naideth-v1-Central
+        run: |
+          git clone https://Naidethciccolombia:${{ secrets.TOKEN }}@github.com/Naidethciccolombia/Naideth-v1-Central.git ./Naideth-v1-Traslados/Naideth-v1-Central
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.400'
+
+      - name: Publicar API Traslados
+        run: dotnet publish -c Release -o /home/runner/work/publish/naideth-v1-Traslados.claudin.com.co ./Naideth-v1-Traslados/Naideth-v1-Traslado/4.Presentacion/Naideth.Traslados.Api/Naideth.Traslados.Api.csproj
+
+      - name: Listar archivos de publicación de API Traslados
+        run: ls -la /home/runner/work/publish/naideth-v1-Traslados.claudin.com.co
+
+      - name: Configurar SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Desplegar API Traslados
+        env:
+          REMOTE_HOST: ${{ secrets.REMOTE_IP }}
+          USERNAME: ${{ secrets.REMOTE_USERNAME }}
+        run: |
+          ssh -o StrictHostKeyChecking=no $USERNAME@$REMOTE_HOST 'echo "Desplegando Naideth.Traslados.Api..."'
+          scp -o StrictHostKeyChecking=no -r /home/runner/work/publish/naideth-v1-Traslados.claudin.com.co $USERNAME@$REMOTE_HOST:/var/www/
+          ssh -o StrictHostKeyChecking=no $USERNAME@$REMOTE_HOST 'sudo systemctl restart Traslados.service' 
+          ssh -o StrictHostKeyChecking=no $USERNAME@$REMOTE_HOST 'echo "Desplegando Naideth.Traslados.Api... ok"'

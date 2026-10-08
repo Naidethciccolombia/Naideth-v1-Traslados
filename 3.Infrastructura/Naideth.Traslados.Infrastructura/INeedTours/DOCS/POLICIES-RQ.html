@@ -1,0 +1,14 @@
+<table data-node-tree-view="done"><thead><tr><th>Node</th><th>Attribute</th><th>Data Type</th><th>Description</th><th>Value</th><th>Mandatory</th></tr></thead><tbody><tr><td><span class="node-parent">DestServicesCancellationFeesV2\<br></span><span class="node-leaf">objRequest</span></td><td><code>PrimaryLangID</code></td><td><strong>String</strong></td><td>Language code</td><td><a class="" href="/booking-api/static-data/08-language">LANGUAGE</a></td><td>Required</td></tr><tr><td><span class="node-parent">DestServicesCancellationFeesV2\<br></span><span class="node-leaf">objRequest</span></td><td><code>TransactionIdentifier</code></td><td><strong>String</strong></td><td>This value is returned in the response of the method DestServicesBookV2 and represents the locator of the booking</td><td></td><td>Required</td></tr></tbody></table>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ws="http://xml.ineedtours.com/ws/">
+    <soapenv:Header />
+    <soapenv:Body>
+        <ws:DestServicesCancellationFeesV2>
+            <ws:objCredentials>
+                <ws:Source>
+                    <ws:RequestorID Type="DSP" ID="YOUR-USER" MessagePassword="YOUR-PASSWORD" />
+                </ws:Source>
+            </ws:objCredentials>
+            <ws:objRequest PrimaryLangID="IDLANGUAGE" TransactionIdentifier="D6JL8E" />
+        </ws:DestServicesCancellationFeesV2>
+    </soapenv:Body>
+</soapenv:Envelope>

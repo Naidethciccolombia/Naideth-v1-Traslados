@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
+    <PackageReference Include="Microsoft.Build.Tasks.Git" Version="10.0.111">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.Grafana.Loki" Version="8.3.0" />
+    <PackageReference Include="Serilog.Sinks.Http" Version="9.1.0" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="8.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Naideth-v1-Central\1.Dominio\Naideth.Central.Dominio\Naideth.Central.Dominio.csproj" />
+    <ProjectReference Include="..\..\1.Dominio\Naideth.Traslados.Dominio\Naideth.Traslados.Dominio.csproj" />
+    <ProjectReference Include="..\..\2.Aplicacion\Naideth.Traslados.Aplicacion\Naideth.Traslados.Aplicacion.csproj" />
+    <ProjectReference Include="..\..\3.Infrastructura\Naideth.Traslados.Infrastructura\Naideth.Traslados.Infrastructura.csproj" />
+    <ProjectReference Include="..\Naideth.Traslados.Api.Contratos\Naideth.Traslados.Api.Contratos.csproj" />
+  </ItemGroup>
+
+</Project>

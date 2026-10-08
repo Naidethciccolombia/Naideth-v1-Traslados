@@ -1,0 +1,79 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11822.322
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "1.Dominio", "1.Dominio", "{354768F7-3A99-3F18-AFAA-DAA56300AA04}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Naideth.Central.Dominio", "..\Naideth-v1-Central\1.Dominio\Naideth.Central.Dominio\Naideth.Central.Dominio.csproj", "{38BC29E7-3D07-B5BE-45B9-92B16E1EFD17}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Naideth.Traslados.Dominio", "1.Dominio\Naideth.Traslados.Dominio\Naideth.Traslados.Dominio.csproj", "{F682E5A8-3899-40DC-8CF4-0854C94C5934}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2.Aplicacion", "2.Aplicacion", "{F3124116-C720-0DAF-9435-8D34993AA967}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Naideth.Traslados.Aplicacion", "2.Aplicacion\Naideth.Traslados.Aplicacion\Naideth.Traslados.Aplicacion.csproj", "{AE09ACFE-ACA1-481C-95EC-AF3502533386}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "3.Infrastructura", "3.Infrastructura", "{FF973F2D-45D5-94F2-10AD-2D6EDABB3520}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Naideth.Traslados.Infrastructura", "3.Infrastructura\Naideth.Traslados.Infrastructura\Naideth.Traslados.Infrastructura.csproj", "{18B1367E-EA92-471D-B1EB-0DB7EB173922}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "4.Presentacion", "4.Presentacion", "{6E85DE7B-B6C3-FEEF-A69F-665DAD640D58}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Naideth.Traslados.Api.Contratos", "4.Presentacion\Naideth.Traslados.Api.Contratos\Naideth.Traslados.Api.Contratos.csproj", "{98D90B77-F11A-4AD1-A060-975C0E69EB28}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Naideth.Traslados.Api", "4.Presentacion\Naideth.Traslados.Api\Naideth.Traslados.Api.csproj", "{75571143-549A-49F4-85D9-DF49009E3659}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0C88DD14-F956-CE84-757C-A364CCF449FC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{38BC29E7-3D07-B5BE-45B9-92B16E1EFD17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38BC29E7-3D07-B5BE-45B9-92B16E1EFD17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38BC29E7-3D07-B5BE-45B9-92B16E1EFD17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38BC29E7-3D07-B5BE-45B9-92B16E1EFD17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F682E5A8-3899-40DC-8CF4-0854C94C5934}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F682E5A8-3899-40DC-8CF4-0854C94C5934}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F682E5A8-3899-40DC-8CF4-0854C94C5934}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F682E5A8-3899-40DC-8CF4-0854C94C5934}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE09ACFE-ACA1-481C-95EC-AF3502533386}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE09ACFE-ACA1-481C-95EC-AF3502533386}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE09ACFE-ACA1-481C-95EC-AF3502533386}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE09ACFE-ACA1-481C-95EC-AF3502533386}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18B1367E-EA92-471D-B1EB-0DB7EB173922}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18B1367E-EA92-471D-B1EB-0DB7EB173922}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18B1367E-EA92-471D-B1EB-0DB7EB173922}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18B1367E-EA92-471D-B1EB-0DB7EB173922}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98D90B77-F11A-4AD1-A060-975C0E69EB28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98D90B77-F11A-4AD1-A060-975C0E69EB28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98D90B77-F11A-4AD1-A060-975C0E69EB28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98D90B77-F11A-4AD1-A060-975C0E69EB28}.Release|Any CPU.Build.0 = Release|Any CPU
+		{75571143-549A-49F4-85D9-DF49009E3659}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75571143-549A-49F4-85D9-DF49009E3659}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75571143-549A-49F4-85D9-DF49009E3659}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75571143-549A-49F4-85D9-DF49009E3659}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{354768F7-3A99-3F18-AFAA-DAA56300AA04} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{38BC29E7-3D07-B5BE-45B9-92B16E1EFD17} = {354768F7-3A99-3F18-AFAA-DAA56300AA04}
+		{F682E5A8-3899-40DC-8CF4-0854C94C5934} = {354768F7-3A99-3F18-AFAA-DAA56300AA04}
+		{F3124116-C720-0DAF-9435-8D34993AA967} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{AE09ACFE-ACA1-481C-95EC-AF3502533386} = {F3124116-C720-0DAF-9435-8D34993AA967}
+		{FF973F2D-45D5-94F2-10AD-2D6EDABB3520} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{18B1367E-EA92-471D-B1EB-0DB7EB173922} = {FF973F2D-45D5-94F2-10AD-2D6EDABB3520}
+		{6E85DE7B-B6C3-FEEF-A69F-665DAD640D58} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{98D90B77-F11A-4AD1-A060-975C0E69EB28} = {6E85DE7B-B6C3-FEEF-A69F-665DAD640D58}
+		{75571143-549A-49F4-85D9-DF49009E3659} = {6E85DE7B-B6C3-FEEF-A69F-665DAD640D58}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BF7B49D1-32D7-4CAD-9BE2-8834AA6DA20A}
+	EndGlobalSection
+EndGlobal

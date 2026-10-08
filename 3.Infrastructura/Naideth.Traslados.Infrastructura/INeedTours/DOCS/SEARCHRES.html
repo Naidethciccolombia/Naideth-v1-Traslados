@@ -1,0 +1,164 @@
+<p>
+    Transfer time usage
+    You must indicate the pick-up time and the drop-off time, respectively (if you have them, in case you don't have both times, send in the 2 fields the time you have available).
+    The response shall return recalculated pick-up and drop-off times if is available. For example: If the same time is provided at both origin and destination, if the returned transfer has no offset or journey time configured, the same time will be returned in the 2 fields.
+</p>
+<p>
+    If the same time is provided at both origin and destination, if the transfer returned has the offset or journey time configured, the calculated pick-up time will be returned and the destination time will be the one requested.
+</p>
+<p>
+    In the case of outward and return transfers, the operation is the same except that the "LocationOriginTime" attribute of the call will refer to the outward destination time and the "LocationDestinationTime" attribute of the call will refer to the return destination time
+</p>
+<table data-node-tree-view="done"><thead><tr><th>Node</th><th>Attribute</th><th>Data Type</th><th>Description</th><th>Value</th><th>Mandatory</th></tr></thead><tbody><tr><td><span class="node-leaf">DestServicesAvailV2Result</span></td><td><code>EchoToken</code></td><td><strong>Integer</strong></td><td>Availability search identifier. Send this value in <code>DestServicesBookV2</code> to book one of the returned options.</td><td></td><td>Required</td></tr><tr><td><span class="node-leaf">DestServicesAvailV2Result</span></td><td><code>PrimaryLangID</code></td><td><strong>String</strong></td><td>Language code used in the response</td><td><a class="" href="/booking-api/static-data/08-language">LANGUAGE</a></td><td>Required</td></tr><tr><td><span class="node-parent">DestServicesAvailV2Result\<br /></span><span class="node-leaf">Header</span></td><td></td><td></td><td>Response metadata</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">DestServicesAvailV2Result\<br /></span><span class="node-leaf">Header</span></td><td><code>ResponseTimestamp</code></td><td><strong>DateTime</strong></td><td>Date and time when the response was generated</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">DestServicesAvailV2Result\<br /></span><span class="node-leaf">Header</span></td><td><code>MillisecondProcessingTime</code></td><td><strong>Integer</strong></td><td>Request processing time in milliseconds</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">DestServicesAvailV2Result\<br /></span><span class="node-leaf">Header</span></td><td><code>Endpoint</code></td><td><strong>String</strong></td><td>Endpoint that processed the request</td><td></td><td>Required</td></tr><tr><td><span class="node-leaf">Products</span></td><td></td><td><strong>Array</strong></td><td>Array of products</td><td></td><td>Required</td></tr><tr><td><span class="node-leaf">AvailResponseV2Product</span></td><td></td><td></td><td>Content of product data</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">Products/<br />AvailResponseV2Product/<br /></span><span class="node-leaf">ProductCode</span></td><td></td><td><strong>Integer</strong></td><td>Product code</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">Products/<br />AvailResponseV2Product/<br /></span><span class="node-leaf">ProductName</span></td><td></td><td><strong>String</strong></td><td>Product name</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">Products/<br />AvailResponseV2Product/<br /></span><span class="node-leaf">ProductDescription</span></td><td></td><td><strong>Integer</strong></td><td>Text description product</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">Products/<br />AvailResponseV2Product/<br /></span><span class="node-leaf">ProductCategory</span></td><td></td><td><strong>String</strong></td><td>Category name</td><td><a class="" href="/booking-api/static-data/09-product-type">PRODUCTTYPE</a></td><td>Required</td></tr><tr><td><span class="node-parent">Products/<br />AvailResponseV2Product/<br /></span><span class="node-leaf">ProductDays</span></td><td></td><td><strong>Integer</strong></td><td>Product duration</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">Products/<br />AvailResponseV2Product/<br /></span><span class="node-leaf">PriceFrom</span></td><td></td><td></td><td>Information about minimum price</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">Products/<br />AvailResponseV2Product/<br /></span><span class="node-leaf">PriceFrom</span></td><td><code>CurrencyCode</code></td><td><strong>String</strong></td><td>Currecy Code</td><td>CURRENCY</td><td>Required</td></tr><tr><td><span class="node-leaf">ProductBookingCode</span></td><td></td><td><strong>Integer</strong></td><td>Code for add to cart this product</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br /></span><span class="node-leaf">Concepts</span></td><td></td><td><strong>Array</strong></td><td>Array of concepts</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br /></span><span class="node-leaf">AvailResponseV2Concept</span></td><td></td><td></td><td>Content of concept data</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">ConceptCode</span></td><td></td><td><strong>Integer</strong></td><td>Code concept</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">ConceptName</span></td><td></td><td><strong>String</strong></td><td>Concept name</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">ConceptDescription</span></td><td></td><td><strong>String</strong></td><td>Concept text description</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">ConceptBookingCode</span></td><td></td><td><strong>String</strong></td><td>Code for add this concept to cart</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">MinimalUnits</span></td><td></td><td><strong>Integer</strong></td><td>Number of min units</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">MaximumUnits</span></td><td></td><td><strong>Integer</strong></td><td>Number of max units</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">AgeFrom</span></td><td></td><td><strong>Integer</strong></td><td>Minumum age for ocupancy</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">AgeTo</span></td><td></td><td><strong>Integer</strong></td><td>Maximum age for ocuppancy</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">IsChild</span></td><td></td><td><strong>boolean</strong></td><td>Only for child</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">Details</span></td><td></td><td><strong>Array</strong></td><td>Array of concept information</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br /></span><span class="node-leaf">AvailResponseV2Detail</span></td><td><code>DetailName</code></td><td><strong>String</strong></td><td>Detail name</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br /></span><span class="node-leaf">AvailResponseV2Detail</span></td><td><code>DetailBookingCode</code></td><td><strong>String</strong></td><td>Detail code for add to cart</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br /></span><span class="node-leaf">AvailResponseV2Detail</span></td><td><code>Date</code></td><td><strong>Date</strong></td><td>Date of service</td><td>YYYY-MM-DD</td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br /></span><span class="node-leaf">AvailResponseV2Detail</span></td><td><code>OnRequest</code></td><td><strong>Boolean</strong></td><td>Need manual confirmation (on request)</td><td>true/false</td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br /></span><span class="node-leaf">AvailResponseV2Detail</span></td><td><code>Offer</code></td><td><strong>Boolean</strong></td><td>Is offer</td><td>true/false</td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br /></span><span class="node-leaf">Total</span></td><td></td><td></td><td>Price information detail (<a class="" href="/booking-api/methods/methods-overview#amountmanagement">more info</a>)</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br />Total/<br /></span><span class="node-leaf">Taxes</span></td><td><code>Amount</code></td><td><strong>Decimal</strong></td><td>Total amount</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br />Total/<br /></span><span class="node-leaf">Taxes</span></td><td><code>CurrencyCode</code></td><td><strong>String</strong></td><td>Currency code</td><td>CURRENCY</td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br />Total/<br /></span><span class="node-leaf">Taxes</span></td><td><code>NumDecimals</code></td><td><strong>Integer</strong></td><td>Number of decimals</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br />Total/<br />Taxes/<br /></span><span class="node-leaf">Commissions</span></td><td></td><td></td><td>Commission information</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br />Total/<br />Taxes/<br /></span><span class="node-leaf">Commissions</span></td><td><code>SellingPrice</code></td><td><strong>Decimal</strong></td><td>Amount for selling</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br />Total/<br />Taxes/<br /></span><span class="node-leaf">Commissions</span></td><td><code>CommissionableAmount</code></td><td><strong>Decimal</strong></td><td>Comisionable amount</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br />Total/<br />Taxes/<br /></span><span class="node-leaf">Commissions</span></td><td><code>NotCommissionableAmount</code></td><td><strong>Decimal</strong></td><td>No commissionable amount</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br />Total/<br />Taxes/<br /></span><span class="node-leaf">Commissions</span></td><td><code>CommissionAmount</code></td><td><strong>Decimal</strong></td><td>Commision amount</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br />Total/<br />Taxes/<br /></span><span class="node-leaf">Commissions</span></td><td><code>NetAmount</code></td><td><strong>Decimal</strong></td><td>Net amount</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br /></span><span class="node-leaf">IsOptional</span></td><td></td><td><strong>Boolean</strong></td><td>If this node is "true", the detail not is included and you need specify in the DestServicesBookV2 the quantity to book them.</td><td>true/false</td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Details/<br />AvailResponseV2Detail/<br /></span><span class="node-leaf">PerPerson</span></td><td></td><td><strong>Boolean</strong></td><td>Indicates if the detail is per person. Otherwise, it applies to the entire reservation.</td><td>true/false</td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />BookOptions/<br /></span><span class="node-leaf">Availability</span></td><td></td><td><strong>Array</strong></td><td>Array of booking information</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />BookOptions/<br />Availability/<br /></span><span class="node-leaf">AvailResponseV2Avail</span></td><td><code>Date</code></td><td><strong>Date</strong></td><td>Date</td><td>YYYY-MM-AA</td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />BookOptions/<br />Availability/<br /></span><span class="node-leaf">AvailResponseV2Avail</span></td><td><code>Available</code></td><td><strong>Boolean</strong></td><td>Available</td><td>true/false</td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />BookOptions/<br />Availability/<br /></span><span class="node-leaf">AvailResponseV2Avail</span></td><td><code>Hour</code></td><td><strong>String</strong></td><td>Hour</td><td>--:--</td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">Contents</span></td><td></td><td><strong>Array</strong></td><td>Concept contents</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Contents/<br /></span><span class="node-leaf">AvailResponseV2Content</span></td><td></td><td></td><td>Data for content</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />BookOptions/<br />Availability/<br /></span><span class="node-leaf">AvailResponseV2Avail</span></td><td><code>Availability</code></td><td><strong>STRING</strong></td><td>State of the availability: <strong>OPENSALE:</strong> Option opened to the sales without quota. <strong>QUOTA:</strong> Option opened to the sales with limitation of quota. <strong>ONREQUEST:</strong> Option opened but without online confirmation. <strong>NOTAVAILABLE:</strong> Option not available. <strong>CLOSEDSALE:</strong> Option not available.</td><td>OPENSALE / QUOTA / ONREQUEST / NOTAVAILABLE / CLOSEDSALE</td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">Transfer</span></td><td></td><td></td><td>Data for transfer</td><td></td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">Transfer</span></td><td><code>Mode</code></td><td><strong>String</strong></td><td>Transfer mode</td><td>ONEWAY or RETURN</td><td>Required</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">Transfer</span></td><td><code>DeliveryTime</code></td><td><strong>String</strong></td><td>Delivery time</td><td>--:--</td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">Transfer</span></td><td><code>PickUpTime</code></td><td><strong>String</strong></td><td>Pickup time</td><td>--:--</td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br /></span><span class="node-leaf">Images</span></td><td></td><td><strong>Array</strong></td><td>Array of images</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Images/<br /></span><span class="node-leaf">AvailResponseV2Image</span></td><td></td><td></td><td>Content of image data</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Images/<br />AvailResponseV2Image/<br /></span><span class="node-leaf">URL</span></td><td></td><td><strong>String</strong></td><td>URL image</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br /></span><span class="node-leaf">Attributes</span></td><td></td><td><strong>Array</strong></td><td>Product attributes returned when <code>DataOptions\Attributes</code> is <code>true</code></td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Attributes/<br /></span><span class="node-leaf">AvailResponseV2Attribute</span></td><td></td><td></td><td>Product attribute data</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Attributes/<br /></span><span class="node-leaf">AvailResponseV2Attribute</span></td><td><code>LangID</code></td><td><strong>Integer</strong></td><td>Attribute language code</td><td><a class="" href="/booking-api/static-data/08-language">LANGUAGE</a></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Attributes/<br />AvailResponseV2Attribute/<br /></span><span class="node-leaf">Name</span></td><td></td><td><strong>String</strong></td><td>Attribute name</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Attributes/<br />AvailResponseV2Attribute/<br /></span><span class="node-leaf">Value</span></td><td></td><td><strong>String</strong></td><td>Attribute value</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Attributes/<br />AvailResponseV2Attribute/<br /></span><span class="node-leaf">Sort</span></td><td></td><td><strong>Integer</strong></td><td>Attribute order</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br /></span><span class="node-leaf">Attributes</span></td><td></td><td><strong>Array</strong></td><td>Concept attributes returned when <code>DataOptions\Attributes</code> is <code>true</code></td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Attributes/<br /></span><span class="node-leaf">AvailResponseV2Attribute</span></td><td></td><td></td><td>Concept attribute data</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Attributes/<br /></span><span class="node-leaf">AvailResponseV2Attribute</span></td><td><code>LangID</code></td><td><strong>Integer</strong></td><td>Attribute language code</td><td><a class="" href="/booking-api/static-data/08-language">LANGUAGE</a></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Attributes/<br />AvailResponseV2Attribute/<br /></span><span class="node-leaf">Name</span></td><td></td><td><strong>String</strong></td><td>Attribute name</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Attributes/<br />AvailResponseV2Attribute/<br /></span><span class="node-leaf">Value</span></td><td></td><td><strong>String</strong></td><td>Attribute value</td><td></td><td>Optional</td></tr><tr><td><span class="node-parent">AvailResponseV2Product/<br />Concepts/<br />AvailResponseV2Concept/<br />Attributes/<br />AvailResponseV2Attribute/<br /></span><span class="node-leaf">Sort</span></td><td></td><td><strong>Integer</strong></td><td>Attribute order</td><td></td><td>Optional</td></tr></tbody></table>
+<?xml version="1.0" encoding="UTF-8" ?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <soap:Body>
+        <DestServicesAvailV2Response xmlns="http://xml.ineedtours.com/ws/">
+            <DestServicesAvailV2Result EchoToken="668" PrimaryLangID="ES">
+                <Header ResponseTimestamp="2019-01-10T18:27:49.1566818+01:00" MillisecondProcessingTime="8427" Endpoint="demo.xml.com" />
+                <Products>
+                    <AvailResponseV2Product>
+                        <ProductCode>1352</ProductCode>
+                        <ProductName>Coche Berlina Tipo A</ProductName>
+                        <ProductDescription>Veh&iacute;culos tipo** Peugeot 508 o Skoda SuperB** para realizar tus traslados hasta un m&aacute;ximo de 4 personas. Amplios, c&oacute;modos y siempre limpios.</ProductDescription>
+                        <ProductCategory>TRASLADOS</ProductCategory>
+                        <ProductImage>http://desarrolloweb.ineedtours.com/V05/img/ddw/Traslado/1352/1352_126.jpg</ProductImage>
+                        <ProductDays>1</ProductDays>
+                        <PriceFrom CurrencyCode="EUR">
+                            <Price>105.0000</Price>
+                        </PriceFrom>
+                        <ProductBookingCode>1</ProductBookingCode>
+                        <Concepts>
+                            <AvailResponseV2Concept>
+                                <ConceptCode>1398</ConceptCode>
+                                <ConceptName>Coche Berlina Tipo A</ConceptName>
+                                <ConceptDescription>Coche Berlina Tipo A</ConceptDescription>
+                                <ConceptBookingCode>1352/1592/4460/1398</ConceptBookingCode>
+                                <MinimalUnits xsi:nil="true" />
+                                <MaximumUnits xsi:nil="true" />
+                                <AgeFrom>0</AgeFrom>
+                                <AgeTo>99</AgeTo>
+                                <IsChild>false</IsChild>
+                                <Details>
+                                    <AvailResponseV2Detail>
+                                        <DetailName>Coche Berlina Tipo A</DetailName>
+                                        <DetailBookingCode>1</DetailBookingCode>
+                                        <Date xsi:nil="true" />
+                                        <OnRequest>false</OnRequest>
+                                        <Total>
+                                            <Taxes Amount="52.5000" CurrencyCode="EUR" NumDecimals="2">
+                                                <Commissions>
+                                                    <SellingPrice>52.5000</SellingPrice>
+                                                    <CommissionableAmount>52.5000</CommissionableAmount>
+                                                    <NotCommissionableAmount>0.0000</NotCommissionableAmount>
+                                                    <CommissionAmount>0.0000</CommissionAmount>
+                                                    <NetAmount>52.5000</NetAmount>
+                                                </Commissions>
+                                            </Taxes>
+                                        </Total>
+                                        <Offer>false</Offer>
+                                    </AvailResponseV2Detail>
+                                </Details>
+
+                                <Contents>
+                                    <AvailResponseV2Content ContentTypeCode="0" Order="0">
+                                        <Title>Peugeot 306, Renault Clio o similares</Title>
+                                        <SmallContent>Vehiculo Peugeot 306, Renault Clio o similares</SmallContent>
+                                        <FullContent>
+                                            <![CDATA[xsdf**g sdfg AAAAAAA AAAAAAAA**sdf**g sdfg sdfg sdf**g sdfg
+
+                                            xsdf**g sdfg sdfg sdf**g sdfg
+
+                                            xsdf**g sdfg sdfg sdf**g sdfg xsdf**g sdfg sdfg sdf**g sdfg
+
+                                            xsdf**g sdfg sdfg sdf**g sdfg ]]>
+                                        </FullContent>
+                                    </AvailResponseV2Content>
+                                </Contents>
+                            </AvailResponseV2Concept>
+                            <AvailResponseV2Concept>
+                                <ConceptCode>1398</ConceptCode>
+                                <ConceptName>Coche Berlina Tipo A</ConceptName>
+                                <ConceptDescription>Coche Berlina Tipo A</ConceptDescription>
+                                <ConceptBookingCode>1352/1592/4459/1398</ConceptBookingCode>
+                                <MinimalUnits xsi:nil="true" />
+                                <MaximumUnits xsi:nil="true" />
+                                <AgeFrom>0</AgeFrom>
+                                <AgeTo>99</AgeTo>
+                                <IsChild>false</IsChild>
+                                <Details>
+                                    <AvailResponseV2Detail>
+                                        <DetailName>Coche Berlina Tipo A</DetailName>
+                                        <DetailBookingCode>1</DetailBookingCode>
+                                        <Date xsi:nil="true" />
+                                        <OnRequest>false</OnRequest>
+                                        <Total>
+                                            <Taxes Amount="52.5000" CurrencyCode="EUR" NumDecimals="2">
+                                                <Commissions>
+                                                    <SellingPrice>52.5000</SellingPrice>
+                                                    <CommissionableAmount>52.5000</CommissionableAmount>
+                                                    <NotCommissionableAmount>0.0000</NotCommissionableAmount>
+                                                    <CommissionAmount>0.0000</CommissionAmount>
+                                                    <NetAmount>52.5000</NetAmount>
+                                                </Commissions>
+                                            </Taxes>
+                                        </Total>
+                                        <Offer>false</Offer>
+                                    </AvailResponseV2Detail>
+                                </Details>
+
+                                <Contents>
+                                    <AvailResponseV2Content ContentTypeCode="0" Order="0">
+                                        <Title>Peugeot 306, Renault Clio o similares</Title>
+                                        <SmallContent>Vehiculo Peugeot 306, Renault Clio o similares</SmallContent>
+                                        <FullContent>
+                                            <![CDATA[xsdf**g sdfg AAAAAAA AAAAAAAA**sdf**g sdfg sdfg sdf**g sdfg
+
+                                            xsdf**g sdfg sdfg sdf**g sdfg
+
+                                            xsdf**g sdfg sdfg sdf**g sdfg xsdf**g sdfg sdfg sdf**g sdfg
+
+                                            xsdf**g sdfg sdfg sdf**g sdfg ]]>
+                                        </FullContent>
+                                    </AvailResponseV2Content>
+                                </Contents>
+                            </AvailResponseV2Concept>
+                        </Concepts>
+                        <Images>
+                            <AvailResponseV2Image>
+                                <URL>http://desarrolloweb.ineedtours.com/V05/img/ddw/Traslado/1352/1352_125.jpg</URL>
+                            </AvailResponseV2Image>
+                            <AvailResponseV2Image>
+                                <URL>http://desarrolloweb.ineedtours.com/V05/img/ddw/Traslado/1352/1352_126.jpg</URL>
+                            </AvailResponseV2Image>
+                        </Images>
+                        <Contents>
+                            <AvailResponseV2Content LangID="1" ContentTypeCode="2" ContentType="Contenido Genérico" Order="0">
+                                <Title>ertoeurtouerte</Title>
+                                <SmallContent>Vehículos tipo Peugeot 508 o Skoda SuperB para realizar tus traslados hasta un máximo de 4 personas. Amplios, cómodos y siempre limpios.</SmallContent>
+                                <FullContent>Veh&iacute;culos tipo** Peugeot 508 o Skoda SuperB** para realizar tus traslados hasta un m&aacute;ximo de 4 personas. Amplios, c&oacute;modos y siempre limpios.</FullContent>
+                            </AvailResponseV2Content>
+                            <AvailResponseV2Content LangID="1" ContentTypeCode="2" ContentType="Contenido Genérico" Order="0">
+                                <Title>Peugeot 508 o Skoda SuperB</Title>
+                                <SmallContent>Vehículos tipo Peugeot 508 o Skoda SuperB para realizar tus traslados hasta un máximo de 4 personas. Amplios, cómodos y siempre limpios.</SmallContent>
+                                <FullContent>Modificado. Veh&iacute;culos tipo **Peugeot 508 o Skoda SuperB para r**ealizar tus traslados hasta un m&aacute;ximo de 4 personas. Amplios, c&oacute;modos y siempre limpios.</FullContent>
+                            </AvailResponseV2Content>
+                        </Contents>
+                        <Attributes>
+                            <AvailResponseV2Attribute LangID="1">
+                                <Name>Horario</Name>
+                                <Value>A</Value>
+                                <Sort>1</Sort>
+                            </AvailResponseV2Attribute>
+                            <AvailResponseV2Attribute LangID="1">
+                                <Name>Tarifa</Name>
+                                <Value>Reducida</Value>
+                                <Sort>2</Sort>
+                            </AvailResponseV2Attribute>
+                        </Attributes>
+                    </AvailResponseV2Product>
+                </Products>
+            </DestServicesAvailV2Result>
+        </DestServicesAvailV2Response>
+    </soap:Body>
+</soap:Envelope>

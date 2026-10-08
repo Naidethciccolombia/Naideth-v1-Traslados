@@ -151,9 +151,8 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
             try
             {
-                var rq = ObjetoPeticionPreReserva(credenciales, tarifaSeleccionada);
-                var dataXml = rq.SerializarXml();
-
+                var dataXml = ObjetoPeticionPreReserva(credenciales, tarifaSeleccionada);
+                
                 var (xmlRespuesta, _) = await EnviarSoapAsync(idBusqueda, busqueda.Referencia, evento, "Peticion INeedTours BOOK", dataXml, credenciales, TokenCancelacion).ConfigureAwait(false);
 
                 if (xmlRespuesta == null)
@@ -802,7 +801,7 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             return resultado;
         }
 
-        private BookRq ObjetoPeticionPreReserva(IntegracionDTO credencial, TarifaDTO tarifa)
+        private string ObjetoPeticionPreReserva(IntegracionDTO credencial, TarifaDTO tarifa)
         {
             var idioma = ObtenerIdioma(credencial);
 
@@ -856,7 +855,7 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
             objRequest.Concepts.Add(concepto);
 
-            return rq;
+            return rq.SerializarXml();
         }
 
         private CommitRq ObjetoPeticionReserva(ReservaDTO peticion, Busqueda busqueda, IntegracionDTO credencial, DisponibilidadDTO disponibilidad, TarifaDTO tarifa)

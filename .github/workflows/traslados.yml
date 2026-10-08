@@ -85,5 +85,5 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no $USERNAME@$REMOTE_HOST 'echo "Desplegando Naideth.Traslados.Api..."'
           scp -o StrictHostKeyChecking=no -r /home/runner/work/publish/naideth-v1-Traslados.claudin.com.co $USERNAME@$REMOTE_HOST:/var/www/
-          ssh -o StrictHostKeyChecking=no $USERNAME@$REMOTE_HOST 'sudo systemctl restart Traslados.service' 
+          ssh -o StrictHostKeyChecking=no $USERNAME@$REMOTE_HOST 'sudo systemctl restart traslados.service' 
           ssh -o StrictHostKeyChecking=no $USERNAME@$REMOTE_HOST 'echo "Desplegando Naideth.Traslados.Api... ok"'

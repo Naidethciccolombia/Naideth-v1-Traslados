@@ -14,10 +14,6 @@ namespace Naideth.Traslados.Api.Contratos.V1.PreReservas.Rs
         [Required]
         [JsonPropertyName("category")]
         public required string Category { get; set; } 
-        [JsonPropertyName("pdfCondicciones")]
-        public required string PdfCondicciones { get; set; } 
-        [JsonPropertyName("pdfDescripcion")]
-        public required string PdfDescripcion { get; set; }
         [Required]
         [JsonPropertyName("nombre")]
         public required string Nombre { get; set; } 
@@ -27,9 +23,6 @@ namespace Naideth.Traslados.Api.Contratos.V1.PreReservas.Rs
         [Required]
         [JsonPropertyName("beneficios")]
         public required List<BeneficiosResponse> Beneficios { get; set; }
-        [Required]
-        [JsonPropertyName("upgrades")]
-        public required List<UpgradeResponse> Upgrades { get; set; }
         [Required]
         [JsonPropertyName("cantidadAdultos")]
         public required int CantidadAdultos { get; set; }

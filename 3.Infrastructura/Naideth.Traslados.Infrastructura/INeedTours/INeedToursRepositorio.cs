@@ -151,9 +151,8 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
             try
             {
-                var rq = ObjetoPeticionPreReserva(credenciales, tarifaSeleccionada);
-                var dataXml = rq.SerializarXml();
-
+                var dataXml = ObjetoPeticionPreReserva(credenciales, tarifaSeleccionada);
+                
                 var (xmlRespuesta, _) = await EnviarSoapAsync(idBusqueda, busqueda.Referencia, evento, "Peticion INeedTours BOOK", dataXml, credenciales, TokenCancelacion).ConfigureAwait(false);
 
                 if (xmlRespuesta == null)
@@ -332,11 +331,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
         #region Privados
 
-        /// <summary>
-        /// Envia una peticion SOAP al proveedor con los headers y timeout estandar,
-        /// registrando el inicio y el fin en el logger GDS. Devuelve el XML de la
-        /// respuesta, o null si la llamada fallo (en cuyo caso el error ya queda logueado).
-        /// </summary>
         private async Task<(string? Xml, string Error)> EnviarSoapAsync(Guid id, string referencia, string evento, string nombreLog, string dataXml, IntegracionDTO credencial, CancellationToken TokenCancelacion)
         {
             var stopwatchExterno = Stopwatch.StartNew();
@@ -375,10 +369,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             return credencial.credencial.FirstOrDefault(c => c.nombre.Equals("Idioma", StringComparison.CurrentCultureIgnoreCase))?.valor ?? IdiomaPorDefecto;
         }
 
-        /// <summary>
-        /// Devuelve el texto del faultstring si la respuesta SOAP contiene un nodo Fault;
-        /// en caso contrario devuelve null. Si existe Fault pero no faultstring, usa un mensaje generico.
-        /// </summary>
         private static string? ObtenerFaultString(XDocument doc)
         {
             var fault = doc.Descendants().FirstOrDefault(e => e.Name.LocalName == NodoFault);
@@ -567,7 +557,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             return new DisponibilidadesDTO(credencial.CodigoIntegrador, credencial.nombre, disponibilidades);
         }
 
-        /// <summary>Datos de un AvailResponseV2Product necesarios para mapear sus conceptos.</summary>
         private record ProductoAvail(
             string? Nombre,
             string Categoria,
@@ -643,43 +632,47 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             var precio = new PrecioDTO(total,
                 new List<PTCTotalDTO> { new PTCTotalDTO(TipoAdulto, 1, total) });
 
-            return new DisponibilidadDTO(
-                credencial.CodigoIntegrador,
-                credencial.nombre,
-                Guid.NewGuid().ToString(),
-                new List<TpaDTO> { new TpaDTO("MonedaOrigen", moneda) },
-                nombreConcepto ?? string.Empty,
-                producto.Dias,
-                CategoriaTraslado,
-                peticion.Inicio,
-                peticion.Fin,
-                imagen,
-                precio,
-                new List<TarifaDTO>
+            return new DisponibilidadDTO
+            {
+                Source = credencial.CodigoIntegrador,
+                SourceName = credencial.nombre,
+                Id = Guid.NewGuid().ToString(),
+                Auxiliares = new List<TpaDTO> { new TpaDTO("MonedaOrigen", moneda) },
+                Plan = nombreConcepto ?? string.Empty,
+                Duracion = producto.Dias,
+                Tipo = CategoriaTraslado,
+                FechaInicio = peticion.Inicio,
+                FechaSalida = peticion.Fin,
+                HoraInicio = horaRecogida,
+                HoraSalida = horaEntrega,
+                Imagen = imagen,
+                Precio = precio,
+                Tarifas = new List<TarifaDTO>
                 {
-                    new TarifaDTO(
-                        conceptoBookingCode,
-                        Guid.NewGuid().ToString(),
-                        producto.Categoria,
-                        string.Empty,
-                        string.Empty,
-                        nombreConcepto ?? string.Empty,
-                        beneficios,
-                        rangoEdad,
-                        totalPax,
-                        0,
-                        0,
-                        new List<UpgradesDTO>())
+                    new TarifaDTO
                     {
-                        Localizador = localizador,
-                        CodigoProducto = producto.CodigoProducto,
-                        CodigoAuxiliar = $"{echoToken}|{producto.ProductCode}|{conceptCode}",
-                        TipoVehiculo = producto.Nombre ?? nombreConcepto,
-                        ModeloVehiculo = modeloVehiculo,
-                        ImagenVehiculo = imagen,
-                        HoraInicio = horaRecogida
+                        Id = conceptoBookingCode,
+                        IdPreReserva = Guid.NewGuid().ToString(),
+                        Category = producto.Categoria,
+                        Nombre = nombreConcepto ?? string.Empty,
+                        Beneficios = beneficios,
+                        RangoEdad = rangoEdad,
+                        CantidadAdultos = totalPax,
+                        CantidadNinos = 0,
+                        CantidadInfantes = 0,
+                        DatosTarifa = new DatosTarifaDTO
+                        {
+                            Localizador = localizador,
+                            CodigoProducto = producto.CodigoProducto,
+                            CodigoAuxiliar = $"{echoToken}|{producto.ProductCode}|{conceptCode}",
+                            TipoVehiculo = producto.Nombre ?? nombreConcepto,
+                            ModeloVehiculo = modeloVehiculo,
+                            ImagenVehiculo = imagen,
+                            HoraInicio = horaRecogida
+                        }
                     }
-                });
+                }
+            };
         }
 
         private static string ExtraerImagenProducto(XElement producto)
@@ -802,7 +795,7 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             return resultado;
         }
 
-        private BookRq ObjetoPeticionPreReserva(IntegracionDTO credencial, TarifaDTO tarifa)
+        private string ObjetoPeticionPreReserva(IntegracionDTO credencial, TarifaDTO tarifa)
         {
             var idioma = ObtenerIdioma(credencial);
 
@@ -816,11 +809,11 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             objRequest.PrimaryLangID = idioma;
 
             // CodigoAuxiliar = "EchoToken|ProductCode|ConceptCode".
-            var auxiliares = tarifa.CodigoAuxiliar?.Split('|') ?? Array.Empty<string>();
+            var auxiliares = tarifa.DatosTarifa?.CodigoAuxiliar?.Split('|') ?? Array.Empty<string>();
 
             objRequest.EchoToken = auxiliares.ElementAtOrDefault(0) ?? string.Empty;
 
-            if (int.TryParse(tarifa.CodigoProducto, out var productBookingCode))
+            if (int.TryParse(tarifa.DatosTarifa?.CodigoProducto, out var productBookingCode))
             {
                 objRequest.ProductBookingCode = productBookingCode;
                 objRequest.ProductBookingCodeSpecified = true;
@@ -846,17 +839,17 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             }
 
             // Detalle opcional (DetailBookingCode) si el proveedor lo devolvio en la busqueda.
-            if (!string.IsNullOrWhiteSpace(tarifa.Localizador))
+            if (!string.IsNullOrWhiteSpace(tarifa.DatosTarifa?.Localizador))
             {
                 concepto.OptionalDetails = new List<OptionalDetail>
                 {
-                    new OptionalDetail { DetailBookingCode = tarifa.Localizador, Quantity = 1 }
+                    new OptionalDetail { DetailBookingCode = tarifa.DatosTarifa.Localizador, Quantity = 1 }
                 };
             }
 
             objRequest.Concepts.Add(concepto);
 
-            return rq;
+            return rq.SerializarXml();
         }
 
         private CommitRq ObjetoPeticionReserva(ReservaDTO peticion, Busqueda busqueda, IntegracionDTO credencial, DisponibilidadDTO disponibilidad, TarifaDTO tarifa)
@@ -877,7 +870,7 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
             var concepto = new CommitRequestV2Concept
             {
-                ConceptBookingCode = tarifa.ConceptoReserva ?? tarifa.Id,
+                ConceptBookingCode = tarifa.DatosTarifa?.ConceptoReserva ?? tarifa.Id,
                 Comments = peticion.Observaciones
             };
 
@@ -1151,21 +1144,55 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             var penalidades = ExtraerPenalidadesReserva(result);
 
             var duracion = Valor(concepto, "Duration");
-            var tarifaActualizada = tarifaSeleccionada with
+            var datosTarifaOriginal = tarifaSeleccionada.DatosTarifa ?? new DatosTarifaDTO();
+            var datosTarifaActualizado = new DatosTarifaDTO
             {
+                Localizador = datosTarifaOriginal.Localizador,
+                CodigoProducto = datosTarifaOriginal.CodigoProducto,
+                CodigoAuxiliar = datosTarifaOriginal.CodigoAuxiliar,
+                TipoVehiculo = datosTarifaOriginal.TipoVehiculo,
+                ModeloVehiculo = datosTarifaOriginal.ModeloVehiculo,
+                ImagenVehiculo = datosTarifaOriginal.ImagenVehiculo,
+                Flexible = datosTarifaOriginal.Flexible,
                 DuracionViaje = duracion,
+                HoraInicio = datosTarifaOriginal.HoraInicio,
                 EsperaMaxima = "10 minutos",
                 CantidadPasajeros = tarifaSeleccionada.CantidadAdultos + tarifaSeleccionada.CantidadNinos + tarifaSeleccionada.CantidadInfantes,
+                MaletasMaximas = datosTarifaOriginal.MaletasMaximas,
                 PoliticasCancelacion = penalidades.Count > 0 ? penalidades : null,
                 ConceptoReserva = Valor(concepto, NodoConceptBookingCode)
             };
-            return disponibilidadSeleccionada with
+
+            var tarifaActualizada = new TarifaDTO
             {
+                Id = tarifaSeleccionada.Id,
+                IdPreReserva = tarifaSeleccionada.IdPreReserva,
+                Category = tarifaSeleccionada.Category,
+                Nombre = tarifaSeleccionada.Nombre,
+                Beneficios = tarifaSeleccionada.Beneficios,
+                RangoEdad = tarifaSeleccionada.RangoEdad,
+                CantidadAdultos = tarifaSeleccionada.CantidadAdultos,
+                CantidadNinos = tarifaSeleccionada.CantidadNinos,
+                CantidadInfantes = tarifaSeleccionada.CantidadInfantes,
+                DatosTarifa = datosTarifaActualizado
+            };
+            return new DisponibilidadDTO
+            {
+                Source = disponibilidadSeleccionada.Source,
+                SourceName = disponibilidadSeleccionada.SourceName,
+                Id = disponibilidadSeleccionada.Id,
+                Auxiliares = disponibilidadSeleccionada.Auxiliares,
+                Plan = disponibilidadSeleccionada.Plan,
+                Duracion = disponibilidadSeleccionada.Duracion,
+                Tipo = disponibilidadSeleccionada.Tipo,
+                FechaInicio = disponibilidadSeleccionada.FechaInicio,
+                FechaSalida = disponibilidadSeleccionada.FechaSalida,
+                Imagen = disponibilidadSeleccionada.Imagen,
+                Precio = precio,
+                Tarifas = new List<TarifaDTO> { tarifaActualizada },
                 LocalizadorReserva = localizadorReserva,
                 EstadoReserva = estadoReserva,
-                EchoTokenReserva = echoTokenReserva,
-                Precio = precio,
-                Tarifas = new List<TarifaDTO> { tarifaActualizada }
+                EchoTokenReserva = echoTokenReserva
             };
         }
 

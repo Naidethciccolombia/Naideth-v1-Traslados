@@ -1,11 +1,9 @@
-﻿
-using Naideth.Traslados.Aplicacion.PreReservas.DTO.Rq; 
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+﻿using System;
 
 namespace Naideth.Traslados.Aplicacion.PreReservas.DTO.Rq
-{ 
-    public sealed record PreReservaSeleccionadaDTO(Guid? IdPreReserva, List<pasajerosUpgradePreReservaDTO>? Upgrades); 
+{
+    public class PreReservaSeleccionadaDTO
+    {
+        public Guid? IdPreReserva { get; set; }
+    }
 }
-
- 

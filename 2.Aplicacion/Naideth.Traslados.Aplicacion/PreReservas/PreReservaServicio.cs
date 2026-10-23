@@ -8,7 +8,6 @@ using Naideth.Traslados.Aplicacion.Busquedas.DTO.Rs;
 using Naideth.Traslados.Aplicacion.CacheRedis.Interfaces;
 using Naideth.Traslados.Aplicacion.Ciudades.Interfaces;
 using Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces;
-using Naideth.Traslados.Aplicacion.Comunes.DTO.Rs;
 using Naideth.Traslados.Aplicacion.Comunes.Interfaces;
 using Naideth.Traslados.Aplicacion.Kernel;
 using Naideth.Traslados.Aplicacion.PreReservas.DTO.Rq;
@@ -160,106 +159,11 @@ namespace Naideth.Traslados.Aplicacion.PreReserva
                 throw new CacheBusquedaNoEncontrada();
             }
 
-            var resultado = peticion.Upgrades?
-      .Where(x => x.Upgrade != null && x.Upgrade.Any())
-      .SelectMany(x => x.Upgrade.Select(upgrade => new
-      {
-          IdPlan = x.IdPlan,
-          Pax = x.Pax,
-          IdUpgrade = upgrade
-      }))
-      .GroupBy(x => x.IdPlan)
-      .Select(gPlan => new
-      {
-          IdPlan = gPlan.Key,
-          Upgrades = gPlan
-              .GroupBy(x => x.IdUpgrade)
-              .Select(gUpgrade => new
-              {
-                  IdUpgrade = gUpgrade.Key,
-                  Pax = gUpgrade.Select(x => x.Pax).ToList()
-              }).ToList()
-      }).ToList();
-
-            var tarifas = new List<TarifaDTO>();
-
-
-            if (resultado.Count == 0)
+            return new TrasladoPreReservaRsDTO
             {
-                tarifas.AddRange(dispCache.Tarifas.ToList());
-            }
-
-
-            if (resultado != null && resultado.Count > 0)
-            {
-                 
-                foreach (var plan in resultado)
-                {
-                    var tarifaSeleccionada = dispCache.Tarifas.FirstOrDefault(p => p.Id == plan.IdPlan);
-
-                    var upgradePlan = new List<UpgradesDTO>();
-
-                    foreach (var upgrade in plan.Upgrades)
-                    {
-                        var upgradeSeleccionado = tarifaSeleccionada.Upgrades.FirstOrDefault(u => u.id == upgrade.IdUpgrade);
-
-                        if (upgradeSeleccionado != null)
-                        {
-
-                            var paxUpgrade = upgradeSeleccionado.PaxUpdate;
-                            var paxUpgradeList = new List<PaxUpgradeDTO>();
-
-                            foreach (var pu in paxUpgrade)
-                            {
-                                List<int> indices = upgrade.Pax;
-                                var edades=new List<int>();
-                                int indice = 0;
-                                foreach (var ed in pu.edades)
-                                {
-                                    if(indices.Contains(indice + 1))
-                                    {
-                                        edades.Add(ed);
-                                    }
-                                    indice++;
-                                }
-
-                                 paxUpgradeList.Add(new PaxUpgradeDTO(pu.tipo, edades ));
-                            }
-                            
-                            upgradePlan.Add(new UpgradesDTO(upgradeSeleccionado.id, upgradeSeleccionado.nombre, upgradeSeleccionado.RangoEdad, upgradeSeleccionado.ValorUnitario, upgradeSeleccionado.PrecioUnitario, paxUpgradeList));
-
-                        }
-                    }
-
-                     var tarifaDTO = new TarifaDTO(tarifaSeleccionada.Id, tarifaSeleccionada.IdPreReserva, tarifaSeleccionada.Category, tarifaSeleccionada.PdfCondicciones, tarifaSeleccionada.PdfDescripcion, tarifaSeleccionada.Nombre, tarifaSeleccionada.Beneficios, tarifaSeleccionada.RangoEdad, tarifaSeleccionada.CantidadAdultos, tarifaSeleccionada.CantidadNinos, tarifaSeleccionada.CantidadInfantes, upgradePlan);
-                     tarifas.Add(tarifaDTO);
-
-                    }
-
-                tarifas.AddRange( dispCache.Tarifas.Where(p => !resultado.Any(r => r.IdPlan == p.Id)).ToList());
-                 
-            }
-            
-            var disponibilidad = new DisponibilidadDTO(
-                dispCache.Source,
-                dispCache.SourceName,
-                dispCache.Id, dispCache.Auxiliares,
-                dispCache.Plan,
-                dispCache.Duracion,
-                dispCache.Tipo,
-                dispCache.FechaInicio,
-                dispCache.FechaSalida,
-                dispCache.Imagen,
-                dispCache.Precio,
-                tarifas ?? dispCache.Tarifas
-                );
-
-
-           return new TrasladoPreReservaRsDTO { 
-               IdPreReserva = peticion.IdPreReserva.Value,
-               Disponibilidad = disponibilidad
-           };
-             
+                IdPreReserva = peticion.IdPreReserva.Value,
+                Disponibilidad = dispCache
+            };
         }
 
 

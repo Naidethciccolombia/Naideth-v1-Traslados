@@ -5,10 +5,6 @@ using System.Xml.Serialization;
 
 namespace Naideth.Traslados.Infrastructura.INeedTours.Models.Rq
 {
-    /// <summary>
-    /// Peticion SOAP DestServicesAvailV2 (busqueda de traslados) para INeedTours.
-    /// Estructura basada en la documentacion SEARCH.html del proveedor.
-    /// </summary>
     [XmlRoot("Envelope", Namespace = SoapEnvelopeNamespace)]
     public class SearchRq
     {
@@ -177,10 +173,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours.Models.Rq
         public LocationInfo? LocationDestination { get; set; }
     }
 
-    /// <summary>
-    /// Informacion detallada de una ubicacion. Segun la documentacion, solo se usa
-    /// cuando la busqueda se realiza por coordenadas o codigo IATA.
-    /// </summary>
     public class LocationInfo
     {
         [XmlAttribute("Type")]

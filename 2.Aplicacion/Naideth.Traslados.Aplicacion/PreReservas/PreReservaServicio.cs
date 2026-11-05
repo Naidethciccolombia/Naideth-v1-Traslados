@@ -123,11 +123,13 @@ namespace Naideth.Traslados.Aplicacion.PreReserva
                         : string.Empty;
 
                     var busqueda = Busqueda.Crear(peticion.IdBusqueda, trayectos, pais, cachedBusquedaResult.moneda, cachedBusquedaResult.referencia, false, cachedBusquedaResult.Filtros.MarkUps);
+
+                    var noFormateo = cachedBusquedaResult.Filtros.noFormateo;
    
                     var    respuesta = SourceName switch
                         {
                             //"TravelKit" => await _TravelKitServicio.PreReservaAsync(peticion, busqueda, cachedResult, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
-                            "INT" => await _INeedToursServicio.PreReservaAsync(peticion, busqueda, cachedResult, listaCredenciales, TokenCancelacion).ConfigureAwait(false),
+                            "INT" => await _INeedToursServicio.PreReservaAsync(peticion, busqueda, cachedResult, noFormateo, listaCredenciales, TokenCancelacion).ConfigureAwait(false),
                           _ => null
                         };
                      

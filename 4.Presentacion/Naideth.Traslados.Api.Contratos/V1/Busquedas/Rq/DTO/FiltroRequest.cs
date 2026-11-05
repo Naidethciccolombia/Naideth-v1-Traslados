@@ -21,5 +21,8 @@ namespace Naideth.Traslados.Api.Contratos.V1.Busquedas.Rs
         [JsonPropertyName("nombres")]
         public List<string>? Nombres { get; set; }
 
+        [JsonPropertyName("noFormateo")]
+        public bool? NoFormateo { get; set; }
+
     }
 }

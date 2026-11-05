@@ -108,6 +108,8 @@ namespace Naideth.Traslados.Aplicacion.Reservas
 
                     var busqueda = Busqueda.Crear(Guid.NewGuid(), trayectos, pais, cachedResult.busqueda.moneda, cachedResult.busqueda.referencia, false, cachedResult.busqueda.Filtros.MarkUps);
 
+                    var noFormateo = cachedResult.busqueda.Filtros.noFormateo;
+
                     var pasajeros = cachedResult.busqueda.pasajeros.Select(p =>
                         Pasajero.Crear(p.cantidad, p.tipo, p.edad, (p.upgrade != null ? new List<int> { p.upgrade.Value } : new List<int>()))
                     ).ToList();
@@ -117,7 +119,7 @@ namespace Naideth.Traslados.Aplicacion.Reservas
                     result = SourceName switch
                         {
                             //"TravelKit" => await _TravelKitServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
-                            "INT" => await _INeedToursServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
+                            "INT" => await _INeedToursServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, noFormateo, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
                             _ => null
                         };
 

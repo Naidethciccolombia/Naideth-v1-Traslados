@@ -18,8 +18,8 @@ namespace Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces
     public interface IINeedToursServicio
     {
         Task<BusquedaResponseDTO> BusquedaAsync(Busqueda peticion, List<IntegracionDTO> listacredenciales, FiltroRequestDTO? Filtros, CancellationToken TokenCancelacion);
-        Task<PreReservaResponseDTO> PreReservaAsync(PreReservaDTO peticion, Busqueda busqueda, CacheDTO cachedResult, List<IntegracionDTO> listacredenciales, CancellationToken TokenCancelacion);
-        Task<ReservaResponseDTO> ReservaAsync(ReservaDTO peticion, Busqueda busqueda, DisponibilidadDTO cachedResult, List<IntegracionDTO> listaCredenciales, CancellationToken TokenCancelacion);
+        Task<PreReservaResponseDTO> PreReservaAsync(PreReservaDTO peticion, Busqueda busqueda, CacheDTO cachedResult, bool noFormateo, List<IntegracionDTO> listacredenciales, CancellationToken TokenCancelacion);
+        Task<ReservaResponseDTO> ReservaAsync(ReservaDTO peticion, Busqueda busqueda, DisponibilidadDTO cachedResult, bool noFormateo, List<IntegracionDTO> listaCredenciales, CancellationToken TokenCancelacion);
         Task<CancelacionResponseDTO> CancelacionAsync(CancelacionDTO peticion, List<IntegracionDTO> listaCredenciales, CancellationToken TokenCancelacion);
     }
 }

@@ -66,6 +66,7 @@ namespace Naideth.Traslados.Aplicacion.Componentes.INeedTours
                         resultado.Data.Disponibilidades,
                         peticion.Moneda,
                         peticion.MarkUps,
+                        filtros?.noFormateo ?? false,
                         tokenCancelacion).ConfigureAwait(false);
 
                     resultado = new ResponseDTO(
@@ -97,7 +98,7 @@ namespace Naideth.Traslados.Aplicacion.Componentes.INeedTours
 
             return new BusquedaResponseDTO(resultado.Estado, resultado.Data);
         }
-        public async Task<PreReservaResponseDTO> PreReservaAsync(PreReservaDTO peticion, Busqueda busqueda, CacheDTO cachedResult, List<IntegracionDTO> listaCredenciales, CancellationToken tokenCancelacion)
+        public async Task<PreReservaResponseDTO> PreReservaAsync(PreReservaDTO peticion, Busqueda busqueda, CacheDTO cachedResult, bool noFormateo, List<IntegracionDTO> listaCredenciales, CancellationToken tokenCancelacion)
         {
             var stopwatch = Stopwatch.StartNew();
             var credencial = listaCredenciales?
@@ -118,6 +119,7 @@ namespace Naideth.Traslados.Aplicacion.Componentes.INeedTours
                    resultado.Data.Disponibilidades,
                    peticion.Moneda,
                    busqueda.MarkUps,
+                   noFormateo,
                    tokenCancelacion).ConfigureAwait(false);
 
                 var resultadOrdenado = new PreReservaResponseDTO(
@@ -139,7 +141,7 @@ namespace Naideth.Traslados.Aplicacion.Componentes.INeedTours
 
             return new PreReservaResponseDTO(Estado.ERROR, null);
         }
-        public async Task<ReservaResponseDTO> ReservaAsync(ReservaDTO peticion, Busqueda busqueda, DisponibilidadDTO cachedResult, List<IntegracionDTO> listaCredenciales, CancellationToken tokenCancelacion)
+        public async Task<ReservaResponseDTO> ReservaAsync(ReservaDTO peticion, Busqueda busqueda, DisponibilidadDTO cachedResult, bool noFormateo, List<IntegracionDTO> listaCredenciales, CancellationToken tokenCancelacion)
         {
             var stopwatch = Stopwatch.StartNew();
             var credencial = listaCredenciales?
@@ -158,6 +160,7 @@ namespace Naideth.Traslados.Aplicacion.Componentes.INeedTours
                 resultado,
                 cachedResult.Precio.Total.Moneda,
                 busqueda.MarkUps,
+                noFormateo,
                 tokenCancelacion).ConfigureAwait(false);
 
             swRepo.Stop();

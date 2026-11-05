@@ -38,8 +38,12 @@ namespace Naideth.Traslados.Aplicacion.Kernel
            List<DisponibilidadDTO>? disponibilidades, 
             string monedaDestino,
             decimal markUps,
+            bool noFormateo,
             CancellationToken tokenCancelacion)
         { 
+
+            if (noFormateo)
+                return disponibilidades;
 
             if (disponibilidades == null)
                 return null;
@@ -60,8 +64,12 @@ namespace Naideth.Traslados.Aplicacion.Kernel
            ReservaResponseDTO disponibilidad, 
             string monedaDestino,
             decimal markUps,
+            bool noFormateo,
             CancellationToken tokenCancelacion)
         {
+            if (noFormateo)
+                return disponibilidad;
+
             var precio = disponibilidad.Precio;
 
             var origenMoneda = disponibilidad.Precio.Total.Moneda;

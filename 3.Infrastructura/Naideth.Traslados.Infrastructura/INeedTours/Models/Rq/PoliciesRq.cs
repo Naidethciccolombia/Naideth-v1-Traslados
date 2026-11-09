@@ -4,10 +4,6 @@ using System.Xml.Serialization;
 
 namespace Naideth.Traslados.Infrastructura.INeedTours.Models.Rq
 {
-    /// <summary>
-    /// Peticion SOAP DestServicesCancellationFeesV2 (politicas de cancelacion) para INeedTours.
-    /// Estructura basada en la documentacion POLICIES-RQ.html del proveedor.
-    /// </summary>
     [XmlRoot("Envelope", Namespace = SoapEnvelopeNamespace)]
     public class PoliciesRq
     {

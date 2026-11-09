@@ -6,12 +6,6 @@ using System.Xml.Serialization;
 
 namespace Naideth.Traslados.Infrastructura.INeedTours.Models.Rq
 {
-    /// <summary>
-    /// Peticion SOAP DestServicesCancelV2 (cancelacion de reserva) para INeedTours.
-    /// Estructura basada en la documentacion CANCEL-RQ.html del proveedor.
-    /// CancelBookingItems solo se envia en cancelaciones parciales; si queda null
-    /// se cancela la reserva completa.
-    /// </summary>
     [XmlRoot("Envelope", Namespace = SoapEnvelopeNamespace)]
     public class CancelRq
     {
@@ -72,10 +66,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours.Models.Rq
         [XmlAttribute("TransactionIdentifier")]
         public string TransactionIdentifier { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Identificadores de los elementos a cancelar (solo cancelaciones parciales).
-        /// Null o vacio => se cancela la reserva completa.
-        /// </summary>
         [XmlArray("CancelBookingItems", Namespace = CancelRq.WsNamespace)]
         [XmlArrayItem("BookingItemIdentifier", Namespace = CancelRq.WsNamespace)]
         public List<int>? CancelBookingItems { get; set; }

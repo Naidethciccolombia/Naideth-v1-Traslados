@@ -6,6 +6,7 @@ using Naideth.Traslados.Aplicacion.Busquedas.Interfaces;
 using Naideth.Traslados.Aplicacion.Cancelaciones.Interfaces;
 using Naideth.Traslados.Aplicacion.Ciudades.Interfaces;
 using Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces;
+using Naideth.Traslados.Aplicacion.Componentes.Civitatis.Interfaces;
 using Naideth.Traslados.Aplicacion.Comunes.Interfaces;
 using Naideth.Traslados.Aplicacion.ConexionesExternas.Interfaces;
 using Naideth.Traslados.Aplicacion.ConvercionMoneda.Interfaces;
@@ -21,6 +22,7 @@ using Naideth.Traslados.Infrastructura.Comunes;
 using Naideth.Traslados.Infrastructura.ConexionesExternas;
 using Naideth.Traslados.Infrastructura.ConvercionMoneda; 
 using Naideth.Traslados.Infrastructura.INeedTours;
+using Naideth.Traslados.Infrastructura.Civitatis;
 using Naideth.Traslados.Infrastructura.Usuarios;
 using Naideth.Traslados.Infrastructura.UsuariosRoles;
 using Naideth.Traslados.Infrastructura.UsuariosTenant;
@@ -48,6 +50,7 @@ namespace Naideth.Traslados.Infrastructura
             servicios.AddScoped<ICiudadRepositorio, CiudadRepositorio>();
 
               servicios.AddScoped<IINeedToursRepositorio, INeedToursRepositorio>();
+              servicios.AddScoped<ICivitatisRepositorio, CivitatisRepositorio>();
 
                   servicios.AddScoped<IConvercionMonedaRepositorio, ConvercionMonedaRepositorio>(); 
                   servicios.AddScoped<IComunRepositorio, ComunRepositorio>();  

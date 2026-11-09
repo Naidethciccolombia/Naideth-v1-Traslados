@@ -1,4 +1,4 @@
-﻿using Azure;
+using Azure;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Naideth.Traslados.Aplicacion.AppLoggers.Interfaces;
@@ -33,6 +33,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces;
+using Naideth.Traslados.Aplicacion.Componentes.Civitatis.Interfaces;
 
 namespace Naideth.Traslados.Aplicacion.Reservas
 {
@@ -42,6 +43,7 @@ namespace Naideth.Traslados.Aplicacion.Reservas
 
         //private readonly ITravelKitServicio _TravelKitServicio;
         private readonly IINeedToursServicio _INeedToursServicio;
+        private readonly ICivitatisServicio _civitatisServicio;
         private readonly ICacheRedisServicio _cacheServicio;
         private readonly IAppLoggerServicio _logger;
         private readonly ICiudadServicio _ciudadServicio;
@@ -49,11 +51,12 @@ namespace Naideth.Traslados.Aplicacion.Reservas
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(100);
          
 
-        public ReservaServicio(ICiudadServicio ciudadServicio, IComunRepositorio comunRepositorio, IINeedToursServicio ineedToursServicio, ICacheRedisServicio cacheServicio, IAppLoggerServicio logger
+        public ReservaServicio(ICiudadServicio ciudadServicio, IComunRepositorio comunRepositorio, IINeedToursServicio ineedToursServicio, ICivitatisServicio civitatisServicio, ICacheRedisServicio cacheServicio, IAppLoggerServicio logger
         )
         {
             //_TravelKitServicio = travelKitServicioServicio;
             _INeedToursServicio = ineedToursServicio;
+            _civitatisServicio = civitatisServicio;
             _comunRepositorio = comunRepositorio;
             _cacheServicio = cacheServicio;
             _ciudadServicio = ciudadServicio;
@@ -80,7 +83,7 @@ namespace Naideth.Traslados.Aplicacion.Reservas
                     throw new CacheBusquedaNoEncontrada();
                 }
 
-                string SourceName = string.Empty;
+                string Source = string.Empty;
 
       
                 if (cachedResult.disponibilidad != null)
@@ -88,7 +91,7 @@ namespace Naideth.Traslados.Aplicacion.Reservas
          
                   var disponibilidadSeleccionada = cachedResult.disponibilidad;
                      
-                    SourceName = disponibilidadSeleccionada.SourceName;
+                    Source = disponibilidadSeleccionada.Source;
 
                   var ListaCredenciales = await _comunRepositorio.CredencialesAsync(TokenCancelacion).ConfigureAwait(false);
 
@@ -116,10 +119,11 @@ namespace Naideth.Traslados.Aplicacion.Reservas
 
                     busqueda.ListPasajeros(pasajeros);
 
-                    result = SourceName switch
+                    result = Source switch
                         {
                             //"TravelKit" => await _TravelKitServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
                             "INT" => await _INeedToursServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, noFormateo, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
+                            "CIV" => await _civitatisServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, noFormateo, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
                             _ => null
                         };
 

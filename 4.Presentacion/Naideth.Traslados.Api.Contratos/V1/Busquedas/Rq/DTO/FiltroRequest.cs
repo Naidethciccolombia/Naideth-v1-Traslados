@@ -12,7 +12,7 @@ namespace Naideth.Traslados.Api.Contratos.V1.Busquedas.Rs
         public List<string>? Fuentes { get; set; }
 
         [JsonPropertyName("markUps")]
-        public required decimal MarkUps { get; set; }
+        public decimal? MarkUps { get; set; }
 
         [JsonPropertyName("ordenamiento")]
         public string? Ordenamiento { get; set; }

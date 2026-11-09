@@ -129,7 +129,7 @@ namespace Naideth.Traslados.Aplicacion.PreReserva
                     var    respuesta = SourceName switch
                         {
                             //"TravelKit" => await _TravelKitServicio.PreReservaAsync(peticion, busqueda, cachedResult, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
-                            "INT" => await _INeedToursServicio.PreReservaAsync(peticion, busqueda, cachedResult, noFormateo, listaCredenciales, TokenCancelacion).ConfigureAwait(false),
+                            "INeedTours" => await _INeedToursServicio.PreReservaAsync(peticion, busqueda, cachedResult, noFormateo, listaCredenciales, TokenCancelacion).ConfigureAwait(false),
                           _ => null
                         };
                      

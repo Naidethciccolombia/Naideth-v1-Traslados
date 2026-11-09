@@ -119,7 +119,7 @@ namespace Naideth.Traslados.Aplicacion.Reservas
                     result = SourceName switch
                         {
                             //"TravelKit" => await _TravelKitServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
-                            "INT" => await _INeedToursServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, noFormateo, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
+                            "INeedTours" => await _INeedToursServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, noFormateo, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
                             _ => null
                         };
 

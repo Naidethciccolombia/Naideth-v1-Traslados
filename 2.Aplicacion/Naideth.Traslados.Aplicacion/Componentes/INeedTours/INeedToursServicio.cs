@@ -112,15 +112,29 @@ namespace Naideth.Traslados.Aplicacion.Componentes.INeedTours
             {
                 var disponibilidadSeleccionada = cachedResult.disponibilidades.FirstOrDefault(r => r.Id == peticion.IdTarifa.ToString());
 
+                if (disponibilidadSeleccionada == null)
+                {
+                    _logger.ErrorLog(peticion.IdBusqueda.ToString(), peticion.IdBusqueda, "PreReserva", codigoIntegracion, $"INeedTours: no se encontro la disponibilidad {peticion.IdTarifa} en el cache de la busqueda.");
+                    return new PreReservaResponseDTO(Estado.ERROR, null);
+                }
+
                 var swRepo = Stopwatch.StartNew();
 
                 var resultado = await _INeedToursRepositorio.PreReservaAsync(peticion, busqueda, credencial, disponibilidadSeleccionada, tokenCancelacion).ConfigureAwait(false);
-                var disponibilidades = await _comunes.FormateadoTariff(
-                   resultado.Data.Disponibilidades,
-                   peticion.Moneda,
-                   busqueda.MarkUps,
-                   noFormateo,
-                   tokenCancelacion).ConfigureAwait(false);
+
+                if (resultado?.Estado != Estado.OK || resultado.Data?.Disponibilidades == null)
+                {
+                    _logger.ErrorLog(peticion.IdBusqueda.ToString(), peticion.IdBusqueda, "PreReserva", codigoIntegracion, $"INeedTours: la pre-reserva del proveedor no devolvio disponibilidad (Estado {resultado?.Estado}). Revise el log del repositorio.");
+                    return new PreReservaResponseDTO(Estado.ERROR, null);
+                }
+
+                var disponibilidades = await ObtenerDisponibilidadesFormateadas(
+                    resultado.Data.Disponibilidades,
+                    peticion.Moneda,
+                    busqueda.MarkUps,
+                    noFormateo,
+                    peticion.IdBusqueda,
+                    tokenCancelacion).ConfigureAwait(false);
 
                 var resultadOrdenado = new PreReservaResponseDTO(
                      resultado.Estado,
@@ -137,9 +151,37 @@ namespace Naideth.Traslados.Aplicacion.Componentes.INeedTours
             catch (Exception ex)
             {
                 stopwatch.Stop();
+                _logger.ErrorLog(peticion.IdBusqueda.ToString(), peticion.IdBusqueda, "PreReserva", codigoIntegracion, $"Error en pre-reserva INeedTours: {ex}");
             }
 
             return new PreReservaResponseDTO(Estado.ERROR, null);
+        }
+
+        private async Task<List<DisponibilidadDTO>> ObtenerDisponibilidadesFormateadas(
+            List<DisponibilidadDTO> disponibilidades,
+            string monedaDestino,
+            decimal markUps,
+            bool noFormateo,
+            Guid idBusqueda,
+            CancellationToken tokenCancelacion)
+        {
+            try
+            {
+                return await _comunes.FormateadoTariff(
+                    disponibilidades,
+                    monedaDestino,
+                    markUps,
+                    noFormateo,
+                    tokenCancelacion).ConfigureAwait(false);
+            }
+            catch (ExepcionConvitiendoTrm)
+            {
+                // Sin TRM no descartamos la pre-reserva: devolvemos los precios
+                // en la moneda del proveedor sin convertir.
+                _logger.ErrorLog(idBusqueda.ToString(), idBusqueda, "PreReserva", codigoIntegracion,
+                    $"INeedTours: sin TRM para convertir a {monedaDestino}. Se devuelve la pre-reserva en la moneda del proveedor.");
+                return disponibilidades;
+            }
         }
         public async Task<ReservaResponseDTO> ReservaAsync(ReservaDTO peticion, Busqueda busqueda, DisponibilidadDTO cachedResult, bool noFormateo, List<IntegracionDTO> listaCredenciales, CancellationToken tokenCancelacion)
         {

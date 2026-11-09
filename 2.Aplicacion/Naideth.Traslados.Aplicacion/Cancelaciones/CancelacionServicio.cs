@@ -13,6 +13,7 @@ using Naideth.Traslados.Dominio.Kernel.Exepciones;
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces;
+using Naideth.Traslados.Aplicacion.Componentes.Civitatis.Interfaces;
 using Naideth.Traslados.Aplicacion.Comunes.DTO.Rq;
 
 namespace Naideth.Traslados.Aplicacion.Cancelaciones
@@ -23,6 +24,7 @@ namespace Naideth.Traslados.Aplicacion.Cancelaciones
 
         //private readonly ITravelKitServicio _travelKitServicio;
         private readonly IINeedToursServicio _INeedToursServicio;
+        private readonly ICivitatisServicio _civitatisServicio;
 
         private readonly IAppLoggerServicio _logger; 
 
@@ -31,12 +33,13 @@ namespace Naideth.Traslados.Aplicacion.Cancelaciones
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(100);
 
 
-        public CancelacionServicio(IServiceProvider serviceProvider, ICiudadServicio ciudadServicio, IComunRepositorio comunRepositorio, IINeedToursServicio iNeedToursServicio, ICacheRedisServicio cacheServicio, IAppLoggerServicio logger
+        public CancelacionServicio(IServiceProvider serviceProvider, ICiudadServicio ciudadServicio, IComunRepositorio comunRepositorio, IINeedToursServicio iNeedToursServicio, ICivitatisServicio civitatisServicio, ICacheRedisServicio cacheServicio, IAppLoggerServicio logger
         )
         {
             _serviceProvider = serviceProvider;
             //_travelKitServicio = travelKitServicioServicio;
             _INeedToursServicio = iNeedToursServicio;
+            _civitatisServicio = civitatisServicio;
             _comunRepositorio = comunRepositorio;
             _logger = logger;
 
@@ -65,6 +68,7 @@ namespace Naideth.Traslados.Aplicacion.Cancelaciones
                     {
                         //"TK" => await _travelKitServicio.CancelacionAsync(peticion, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
                         "INT" => await _INeedToursServicio.CancelacionAsync(peticion, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
+                        "CIV" => await _civitatisServicio.CancelacionAsync(peticion, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
                         _ => null
                     };
                  

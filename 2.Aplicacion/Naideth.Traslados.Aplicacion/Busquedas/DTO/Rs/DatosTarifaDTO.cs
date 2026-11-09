@@ -30,6 +30,8 @@ namespace Naideth.Traslados.Aplicacion.Busquedas.DTO.Rs
 
         public List<PoliticaCancelacionDTO>? PoliticasCancelacion { get; set; }
 
+        public List<DatosExtraDTO>? Extras { get; set; }
+
         public string? ConceptoReserva { get; set; }
     }
 }

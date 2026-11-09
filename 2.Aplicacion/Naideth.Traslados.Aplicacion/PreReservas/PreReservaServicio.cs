@@ -1,4 +1,4 @@
-﻿using Azure;
+using Azure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -7,6 +7,7 @@ using Naideth.Traslados.Aplicacion.Busquedas.DTO;
 using Naideth.Traslados.Aplicacion.Busquedas.DTO.Rs;
 using Naideth.Traslados.Aplicacion.CacheRedis.Interfaces;
 using Naideth.Traslados.Aplicacion.Ciudades.Interfaces;
+using Naideth.Traslados.Aplicacion.Componentes.Civitatis.Interfaces;
 using Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces;
 using Naideth.Traslados.Aplicacion.Comunes.Interfaces;
 using Naideth.Traslados.Aplicacion.Kernel;
@@ -43,6 +44,7 @@ namespace Naideth.Traslados.Aplicacion.PreReserva
 
         //private readonly ITravelKitServicio _TravelKitServicio;
         private readonly IINeedToursServicio _INeedToursServicio;
+        private readonly ICivitatisServicio _civitatisServicio;
         private readonly ICacheRedisServicio _cacheServicio;
         private readonly IAppLoggerServicio _logger;
         private readonly ICiudadServicio _ciudadServicio;
@@ -52,11 +54,12 @@ namespace Naideth.Traslados.Aplicacion.PreReserva
         private readonly IServiceProvider _serviceProvider;
          
 
-        public PreReservaServicio(IServiceProvider serviceProvider, ICiudadServicio ciudadServicio, IComunRepositorio comunRepositorio, IINeedToursServicio iNeedToursServicio, ICacheRedisServicio cacheServicio, IAppLoggerServicio logger
+        public PreReservaServicio(IServiceProvider serviceProvider, ICiudadServicio ciudadServicio, IComunRepositorio comunRepositorio, IINeedToursServicio iNeedToursServicio, ICivitatisServicio civitatisServicio, ICacheRedisServicio cacheServicio, IAppLoggerServicio logger
         )
         {
             //_TravelKitServicio = travelKitServicioServicio;
             _INeedToursServicio = iNeedToursServicio;
+            _civitatisServicio = civitatisServicio;
             _comunRepositorio = comunRepositorio;
             _cacheServicio = cacheServicio;
             _ciudadServicio = ciudadServicio;
@@ -102,9 +105,15 @@ namespace Naideth.Traslados.Aplicacion.PreReserva
                 if (cachedResult != null)
                 {
          
-                  var disponibilidadSeleccionada = cachedResult.disponibilidades.Where(r => r.Id==peticion.IdTarifa.ToString());
-                     
-                    SourceName = disponibilidadSeleccionada.FirstOrDefault().SourceName;
+                  var disponibilidadSeleccionada = cachedResult.disponibilidades.Where(r => r.Id==peticion.IdTarifa.ToString()).FirstOrDefault();
+
+                    if (disponibilidadSeleccionada == null)
+                    {
+                        _logger.ErrorLog(peticion.IdBusqueda.ToString(), Guid.Empty, "PreReserva", "BUS", $"No se encontro la disponibilidad {peticion.IdTarifa} en el cache de la busqueda {peticion.IdBusqueda}.");
+                        throw new DisponibilidadNoEncontrada();
+                    }
+
+                    SourceName = disponibilidadSeleccionada?.Source ?? string.Empty;
 
                   var listaCredenciales = await _comunRepositorio.CredencialesAsync(TokenCancelacion).ConfigureAwait(false);
 
@@ -129,9 +138,22 @@ namespace Naideth.Traslados.Aplicacion.PreReserva
                     var    respuesta = SourceName switch
                         {
                             //"TravelKit" => await _TravelKitServicio.PreReservaAsync(peticion, busqueda, cachedResult, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
-                            "INeedTours" => await _INeedToursServicio.PreReservaAsync(peticion, busqueda, cachedResult, noFormateo, listaCredenciales, TokenCancelacion).ConfigureAwait(false),
+                            "INT" => await _INeedToursServicio.PreReservaAsync(peticion, busqueda, cachedResult, noFormateo, listaCredenciales, TokenCancelacion).ConfigureAwait(false),
+                            "CIV" => await _civitatisServicio.PreReservaAsync(peticion, busqueda, cachedResult, noFormateo, listaCredenciales, TokenCancelacion).ConfigureAwait(false),
                           _ => null
                         };
+
+                    if (respuesta == null)
+                    {
+                        _logger.ErrorLog(peticion.IdBusqueda.ToString(), Guid.Empty, "PreReserva", SourceName, $"No hay integrador para la fuente '{SourceName}'.");
+                        throw new ExepcionExternaMensaje($"No hay integrador configurado para la fuente {SourceName}");
+                    }
+
+                    if (respuesta.Estado != Estado.OK || respuesta.Data?.Disponibilidades?.Any() != true)
+                    {
+                        _logger.ErrorLog(peticion.IdBusqueda.ToString(), Guid.Empty, "PreReserva", SourceName, $"El proveedor {SourceName} no devolvio disponibilidad en la pre-reserva.");
+                        throw new ExepcionExternaMensaje($"El proveedor {SourceName} no devolvio disponibilidad en la pre-reserva. Revise los logs del integrador.");
+                    }
                      
                     result.IdPreReserva = idPreReserva;
                     result.Disponibilidad = respuesta?.Data?.Disponibilidades?.FirstOrDefault();

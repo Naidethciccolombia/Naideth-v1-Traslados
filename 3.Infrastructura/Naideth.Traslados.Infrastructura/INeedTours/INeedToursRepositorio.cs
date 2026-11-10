@@ -102,6 +102,11 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 if (xmlRespuesta == null)
                     return new ResponseDTO(Estado.ERROR, null);
 
+                // Diagnostico temporal: vuelca la respuesta cruda para contrastar la estructura
+                // real de ConceptBookingCode / DetailBookingCode con la documentacion.
+                _logger.FinPeticionGds(peticion.Referencia, idBusqueda, evento, credencial.codigo, 0,
+                    $"Respuesta SEARCH cruda = {(xmlRespuesta.Length > 8000 ? xmlRespuesta.Substring(0, 8000) : xmlRespuesta)}");
+
                 stopwatchTotal.Stop();
 
                 var disponibilidades = ProcesarRespuestaBusqueda(xmlRespuesta, peticion, credencial);
@@ -819,9 +824,11 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 objRequest.ProductBookingCodeSpecified = true;
             }
 
+            // ConceptBookingCode = codigo del concepto devuelto en DestServicesAvailV2,
+            // que llega en el nodo ConceptCode (no el ConceptBookingCode slash-separado).
             var concepto = new BookRequestV2Concept
             {
-                ConceptBookingCode = tarifa.Id,
+                ConceptBookingCode = auxiliares.ElementAtOrDefault(2) ?? string.Empty,
                 Quantity = 1,
                 QuantitySpecified = true
             };
@@ -1006,6 +1013,15 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 return (string.Empty, null);
             }
 
+            // El proveedor puede responder "Pending" con un nodo <Errors>; se registra el motivo real.
+            var erroresProveedor = ObtenerErroresProveedor(result);
+            if (erroresProveedor.Count > 0)
+            {
+                _logger.ErrorLog(peticion.Referencia, peticion.IdBusqueda, "Reserva", credencial.codigo,
+                    $"INeedTours: el proveedor rechazo el commit. {string.Join(" | ", erroresProveedor)}");
+                return (string.Empty, null);
+            }
+
             // Pendiente de pruebas del flujo completo: evaluar devolver BookingItemIdentifier
             // (identificador del elemento a cancelar) como localizador en lugar del locator global.
             //var primerProducto = result.Elements()
@@ -1128,6 +1144,15 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 return null;
             }
 
+            // El proveedor responde "Pending" con <Errors> cuando rechaza el BOOK (ej. ConceptBookingCode invalido).
+            var erroresProveedor = ObtenerErroresProveedor(result);
+            if (erroresProveedor.Count > 0)
+            {
+                _logger.ErrorLog(peticion.Referencia, peticion.IdBusqueda, "PreReserva", credencial.codigo,
+                    $"INeedTours: el proveedor rechazo la pre-reserva. {string.Join(" | ", erroresProveedor)}");
+                return null;
+            }
+
             var conceptos = ExtraerConceptosReserva(result).ToList();
             var concepto = conceptos.FirstOrDefault();
 
@@ -1244,6 +1269,31 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Detail)?
                 .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?
                 .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+        }
+
+        private static List<string> ObtenerErroresProveedor(XElement result)
+        {
+            // <Errors><Error Type="N"><Code>...</Code><Description>...</Description></Error></Errors>
+            var errores = new List<string>();
+            var nodoErrors = result.Elements().FirstOrDefault(e => e.Name.LocalName == "Errors");
+
+            if (nodoErrors == null)
+                return errores;
+
+            foreach (var error in nodoErrors.Elements().Where(e => e.Name.LocalName == "Error"))
+            {
+                var codigo = error.Elements().FirstOrDefault(e => e.Name.LocalName == "Code")?.Value?.Trim();
+                var descripcion = error.Elements().FirstOrDefault(e => e.Name.LocalName == "Description")?.Value?.Trim();
+
+                if (string.IsNullOrWhiteSpace(codigo) && string.IsNullOrWhiteSpace(descripcion))
+                    continue;
+
+                errores.Add(!string.IsNullOrWhiteSpace(codigo) && !string.IsNullOrWhiteSpace(descripcion)
+                    ? $"{codigo}: {descripcion}"
+                    : codigo ?? descripcion ?? string.Empty);
+            }
+
+            return errores;
         }
 
         private static string DiagnosticoPrecio(XElement result, List<XElement> conceptos)

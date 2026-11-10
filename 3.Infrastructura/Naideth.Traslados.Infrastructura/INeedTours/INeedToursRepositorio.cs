@@ -205,6 +205,14 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 return new ReservaResponseDTO(Estado.ERROR, string.Empty, null);
             }
 
+            // Sin ConceptoReserva (devuelto por BOOK) no se puede confirmar el commit.
+            if (string.IsNullOrWhiteSpace(tarifaSeleccionada.DatosTarifa?.ConceptoReserva))
+            {
+                _logger.ErrorLog(busqueda.Referencia, idPreReserva, evento, credencial.codigo,
+                    "INeedTours: no hay ConceptoReserva (respuesta BOOK) para armar el commit.");
+                return new ReservaResponseDTO(Estado.ERROR, string.Empty, null);
+            }
+
             var stopwatchTotal = Stopwatch.StartNew();
 
             try
@@ -875,9 +883,11 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             objRequest.TransactionIdentifier = disponibilidad.LocalizadorReserva ?? string.Empty;
             objRequest.ClientReference = busqueda.Referencia;
 
+            // ConceptBookingCode = valor devuelto por BOOK (Products>BookResponseV2Concept>ConceptBookingCode).
+            // No usar tarifa.Id (ConceptBookingCode slash-separado de SEARCH): el proveedor lo rechaza.
             var concepto = new CommitRequestV2Concept
             {
-                ConceptBookingCode = tarifa.DatosTarifa?.ConceptoReserva ?? tarifa.Id,
+                ConceptBookingCode = tarifa.DatosTarifa?.ConceptoReserva ?? string.Empty,
                 Comments = peticion.Observaciones
             };
 

@@ -1128,20 +1128,16 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 return null;
             }
 
-            // Precio final autoritativo del concepto. Vive en
-            // Details > BookResponseV2Detail > Total > Taxes (misma estructura que SEARCH).
-            var concepto = result.Elements()
-                .FirstOrDefault(e => e.Name.LocalName == NodoProducts)?
-                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Product)?
-                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoConcepts)?
-                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Concept);
+            var conceptos = ExtraerConceptosReserva(result).ToList();
+            var concepto = conceptos.FirstOrDefault();
 
-            var precio = ExtraerPrecioReserva(concepto);
+            var precio = ExtraerPrecioReserva(conceptos);
 
             if (precio?.Total?.Total == 0m)
             {
+                var detalle = DiagnosticoPrecio(result, conceptos);
                 _logger.ErrorLog(peticion.Referencia, peticion.IdBusqueda, "PreReserva", credencial.codigo,
-                    "INeedTours: el precio de la pre-reserva llego en 0. Revise la estructura de la respuesta BOOK (Total/Taxes).");
+                    $"INeedTours: el precio de la pre-reserva llego en 0. {detalle}");
             }
 
             var penalidades = ExtraerPenalidadesReserva(result);
@@ -1199,22 +1195,38 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             };
         }
 
-        private static PrecioDTO ExtraerPrecioReserva(XElement? concepto)
+        private static PrecioDTO ExtraerPrecioReserva(IEnumerable<XElement> conceptos)
         {
-            // En BOOK el precio autoritativo del concepto vive en
-            // BookResponseV2Concept > Total > Taxes (NO anidado bajo Details, a
-            // diferencia de SEARCH). Se cae al nivel de detalle solo si el
-            // concepto no trae Total propio.
-            var taxes = ObtenerTaxesConcepto(concepto);
+            decimal precioNeto = 0m;
+            decimal precioVenta = 0m;
+            var moneda = MonedaPorDefecto;
+            var hayPrecio = false;
 
-            var importe = taxes?.Attribute(AtributoAmount) != null ? DecimalAtributo(taxes, AtributoAmount) ?? 0m : 0m;
-            var moneda = taxes?.Attribute(AtributoCurrencyCode)?.Value ?? MonedaPorDefecto;
-            var comisiones = taxes?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoCommissions);
-            var precioVenta = DecimalElemento(comisiones, NodoSellingPrice) ?? importe;
-            var precioNeto = DecimalElemento(comisiones, NodoNetAmount) ?? precioVenta;
-            var impuesto = precioVenta - precioNeto;
-            var total = new TotalDTO(moneda, precioNeto, impuesto, precioVenta);
+            foreach (var concepto in conceptos)
+            {
+                var taxes = ObtenerTaxesConcepto(concepto);
+                if (taxes?.Attribute(AtributoAmount) == null)
+                    continue;
 
+                hayPrecio = true;
+
+                var importe = DecimalAtributo(taxes, AtributoAmount) ?? 0m;
+                var comisiones = taxes.Elements().FirstOrDefault(e => e.Name.LocalName == NodoCommissions);
+                var venta = DecimalElemento(comisiones, NodoSellingPrice) ?? importe;
+                var neto = DecimalElemento(comisiones, NodoNetAmount) ?? venta;
+
+                moneda = taxes.Attribute(AtributoCurrencyCode)?.Value ?? moneda;
+                precioVenta += venta;
+                precioNeto += neto;
+            }
+
+            if (!hayPrecio)
+            {
+                var totalVacio = new TotalDTO(moneda, 0m, 0m, 0m);
+                return new PrecioDTO(totalVacio, new List<PTCTotalDTO> { new PTCTotalDTO(TipoAdulto, 1, totalVacio) });
+            }
+
+            var total = new TotalDTO(moneda, precioNeto, precioVenta - precioNeto, precioVenta);
             return new PrecioDTO(total, new List<PTCTotalDTO> { new PTCTotalDTO(TipoAdulto, 1, total) });
         }
 
@@ -1233,6 +1245,32 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?
                 .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
         }
+
+        private static string DiagnosticoPrecio(XElement result, List<XElement> conceptos)
+        {
+            // Vuelca la estructura de precios real para diagnosticar por que llega en 0.
+            var partes = new List<string> { $"Concepts={conceptos.Count}" };
+
+            for (var i = 0; i < conceptos.Count; i++)
+            {
+                var c = conceptos[i];
+                var totalConcepto = c.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal);
+                var taxesConcepto = totalConcepto?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+                var detail = c.Elements().FirstOrDefault(e => e.Name.LocalName == NodoDetails)?
+                    .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Detail);
+                var taxesDetail = detail?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?
+                    .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+
+                partes.Add($"C{i}=Concept:{taxesConcepto?.Attribute(AtributoAmount)?.Value ?? "null"}/{taxesConcepto?.Attribute(AtributoCurrencyCode)?.Value ?? "-"} Detail:{taxesDetail?.Attribute(AtributoAmount)?.Value ?? "null"}/{taxesDetail?.Attribute(AtributoCurrencyCode)?.Value ?? "-"}");
+            }
+
+            var xml = result.ToString(SaveOptions.DisableFormatting);
+            if (xml.Length > 1500)
+                xml = xml.Substring(0, 1500);
+
+            return $"{string.Join(" | ", partes)} || XML={xml}";
+        }
+
 
         private static List<PoliticaCancelacionDTO> ExtraerPenalidadesReserva(XElement result)
         {

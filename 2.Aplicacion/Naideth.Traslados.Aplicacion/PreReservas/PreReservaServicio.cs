@@ -134,6 +134,8 @@ namespace Naideth.Traslados.Aplicacion.PreReserva
                     var busqueda = Busqueda.Crear(peticion.IdBusqueda, trayectos, pais, cachedBusquedaResult.moneda, cachedBusquedaResult.referencia, false, cachedBusquedaResult.Filtros.MarkUps);
 
                     var noFormateo = cachedBusquedaResult.Filtros.noFormateo;
+
+                    _logger.ConfirmacionLog(peticion.IdBusqueda.ToString(), peticion.IdBusqueda, "PreReserva", SourceName, $"IdTarifa={peticion.IdTarifa} | noFormateo(cache busqueda)={noFormateo}");
    
                     var    respuesta = SourceName switch
                         {

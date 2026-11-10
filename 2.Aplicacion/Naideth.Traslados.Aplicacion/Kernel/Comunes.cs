@@ -90,7 +90,7 @@ namespace Naideth.Traslados.Aplicacion.Kernel
             var sumTotal = PtcTotal.Sum(x => x.Total.Total);
 
               
-            var precios = new PrecioReservaDTO(precio.Fuente, new TotalReservaDTO(monedaDestino, sumValor, sumImpuesto, sumTotal+ sumImpuesto), PtcTotal);
+            var precios = new PrecioReservaDTO(precio.Fuente, new TotalReservaDTO(monedaDestino, sumValor, sumImpuesto, sumTotal), PtcTotal);
 
 
             return new ReservaResponseDTO(disponibilidad.Estado, disponibilidad.Localizador, precios);
@@ -108,22 +108,13 @@ namespace Naideth.Traslados.Aplicacion.Kernel
 
             var origenMoneda = disponibilidad.Precio.Total.Moneda;
 
-            // ============================================
-            // 1. CONVERSIÓN GENERAL TOTAL
-            // ============================================
+
             var baseTotal = _convercionMonedaServicio.ConvertirMoneda(disponibilidad.Precio.Total.Valor, origenMoneda, monedaDestino);
             var impTotal = _convercionMonedaServicio.ConvertirMoneda(disponibilidad.Precio.Total.Impuesto, origenMoneda, monedaDestino);
             var total = AplicarMarkUp(baseTotal, markUps);
-            // Total general convertido
-
-            // ============================================
-            // 2. CONVERSIÓN DE PTC  
-            // ============================================
-             
 
             var ptcListaConvertida = disponibilidad.Precio.PtcTotal.Select(item =>
             {
-              //  var monedaOrigPtc = item.Total.Moneda;
 
                 var baseConvertida = _convercionMonedaServicio.ConvertirMoneda(item.Total.Valor, origenMoneda, monedaDestino);
                 var impConvertida = _convercionMonedaServicio.ConvertirMoneda(item.Total.Impuesto, origenMoneda, monedaDestino);

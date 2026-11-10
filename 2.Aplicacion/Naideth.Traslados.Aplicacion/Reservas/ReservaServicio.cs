@@ -83,6 +83,12 @@ namespace Naideth.Traslados.Aplicacion.Reservas
                     throw new CacheBusquedaNoEncontrada();
                 }
 
+                if (cachedResult.disponibilidad == null)
+                {
+                    _logger.ErrorLog(cachedResult.busqueda.referencia, peticion.IdPreReserva, "Reserva", string.Empty, "No hay disponibilidad cacheada para la pre-reserva.");
+                    throw new DisponibilidadNoEncontrada();
+                }
+
                 string Source = string.Empty;
 
       
@@ -124,7 +130,7 @@ namespace Naideth.Traslados.Aplicacion.Reservas
                             //"TravelKit" => await _TravelKitServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
                             "INT" => await _INeedToursServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, noFormateo, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
                             "CIV" => await _civitatisServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, noFormateo, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
-                            _ => null
+                            _ => throw new ExepcionExternaMensaje($"No hay integrador configurado para la fuente {Source}")
                         };
 
                       

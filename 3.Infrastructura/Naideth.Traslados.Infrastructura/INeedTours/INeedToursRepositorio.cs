@@ -924,30 +924,26 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             return edad;
         }
 
-        private static IEnumerable<XElement> ExtraerDetallesReserva(XElement result)
+        private static IEnumerable<XElement> ExtraerConceptosReserva(XElement result)
         {
             return result.Elements()
                 .FirstOrDefault(e => e.Name.LocalName == NodoProducts)?
                 .Elements().Where(e => e.Name.LocalName == NodoBookResponseV2Product)
                 .SelectMany(p => p.Elements().FirstOrDefault(e => e.Name.LocalName == NodoConcepts)?
                     .Elements().Where(e => e.Name.LocalName == NodoBookResponseV2Concept) ?? Enumerable.Empty<XElement>())
-                .Select(c => c.Elements().FirstOrDefault(e => e.Name.LocalName == NodoDetails)?
-                    .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Detail))
-                .OfType<XElement>()
                 ?? Enumerable.Empty<XElement>();
         }
 
-        private static PrecioReservaDTO? CalcularPrecioReserva(IEnumerable<XElement> detalles, string nombreIntegrador)
+        private static PrecioReservaDTO? CalcularPrecioReserva(IEnumerable<XElement> conceptos, string nombreIntegrador)
         {
             decimal precioNeto = 0m;
             decimal precioVenta = 0m;
             var moneda = MonedaPorDefecto;
             var hayPrecio = false;
 
-            foreach (var detalle in detalles)
+            foreach (var concepto in conceptos)
             {
-                var taxes = detalle.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?
-                    .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+                var taxes = ObtenerTaxesConcepto(concepto);
 
                 if (taxes?.Attribute(AtributoAmount) == null)
                     continue;
@@ -1025,9 +1021,9 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
             var localizador = result.Attribute(AtributoTransactionIdentifier)?.Value ?? string.Empty;
 
-            // Precio final: suma de los detalles de todos los conceptos de todos los
-            // productos (misma estructura de precios que BOOK-RS).
-            var precio = CalcularPrecioReserva(ExtraerDetallesReserva(result), credencial.nombre);
+            // Precio final: suma de los conceptos de todos los productos
+            // (Total > Taxes a nivel de concepto, misma estructura que BOOK-RS).
+            var precio = CalcularPrecioReserva(ExtraerConceptosReserva(result), credencial.nombre);
 
             return (localizador, precio);
         }
@@ -1141,6 +1137,13 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Concept);
 
             var precio = ExtraerPrecioReserva(concepto);
+
+            if (precio?.Total?.Total == 0m)
+            {
+                _logger.ErrorLog(peticion.Referencia, peticion.IdBusqueda, "PreReserva", credencial.codigo,
+                    "INeedTours: el precio de la pre-reserva llego en 0. Revise la estructura de la respuesta BOOK (Total/Taxes).");
+            }
+
             var penalidades = ExtraerPenalidadesReserva(result);
 
             var duracion = Valor(concepto, "Duration");
@@ -1198,9 +1201,12 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
         private static PrecioDTO ExtraerPrecioReserva(XElement? concepto)
         {
-            var detalle = concepto?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoDetails)?
-                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Detail);
-            var taxes = detalle?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+            // En BOOK el precio autoritativo del concepto vive en
+            // BookResponseV2Concept > Total > Taxes (NO anidado bajo Details, a
+            // diferencia de SEARCH). Se cae al nivel de detalle solo si el
+            // concepto no trae Total propio.
+            var taxes = ObtenerTaxesConcepto(concepto);
+
             var importe = taxes?.Attribute(AtributoAmount) != null ? DecimalAtributo(taxes, AtributoAmount) ?? 0m : 0m;
             var moneda = taxes?.Attribute(AtributoCurrencyCode)?.Value ?? MonedaPorDefecto;
             var comisiones = taxes?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoCommissions);
@@ -1210,6 +1216,22 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             var total = new TotalDTO(moneda, precioNeto, impuesto, precioVenta);
 
             return new PrecioDTO(total, new List<PTCTotalDTO> { new PTCTotalDTO(TipoAdulto, 1, total) });
+        }
+
+        private static XElement? ObtenerTaxesConcepto(XElement? concepto)
+        {
+            // BOOK/COMMIT: Total > Taxes a nivel de concepto. Fallback al detalle
+            // (BookResponseV2Detail > Total > Taxes) por si el concepto no trae Total.
+            var totalConcepto = concepto?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal);
+            var taxesConcepto = totalConcepto?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+
+            if (taxesConcepto != null)
+                return taxesConcepto;
+
+            return concepto?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoDetails)?
+                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Detail)?
+                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?
+                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
         }
 
         private static List<PoliticaCancelacionDTO> ExtraerPenalidadesReserva(XElement result)

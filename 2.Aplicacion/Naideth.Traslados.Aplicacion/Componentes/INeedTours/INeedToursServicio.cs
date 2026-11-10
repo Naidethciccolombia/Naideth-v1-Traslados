@@ -185,29 +185,72 @@ namespace Naideth.Traslados.Aplicacion.Componentes.INeedTours
         }
         public async Task<ReservaResponseDTO> ReservaAsync(ReservaDTO peticion, Busqueda busqueda, DisponibilidadDTO cachedResult, bool noFormateo, List<IntegracionDTO> listaCredenciales, CancellationToken tokenCancelacion)
         {
+            const string evento = "Reserva";
+            var idPreReserva = peticion.IdPreReserva;
+            var referencia = string.IsNullOrWhiteSpace(busqueda?.Referencia) ? idPreReserva.ToString() : busqueda.Referencia;
             var stopwatch = Stopwatch.StartNew();
+
             var credencial = listaCredenciales?
                 .FirstOrDefault(cr => cr.CodigoIntegrador == codigoIntegracion);
 
             if (credencial == null)
-            {           
+            {
+                _logger.CredencialesNoEncontradas(referencia, idPreReserva, evento, codigoIntegracion);
                 return new ReservaResponseDTO(Estado.ERROR, null, null);
             }
-            var swRepo = Stopwatch.StartNew();
-            
-            var resultado = await _INeedToursRepositorio.ReservaAsync(peticion, busqueda, credencial, cachedResult, tokenCancelacion).ConfigureAwait(false);
-            if (resultado == null)
-                return new ReservaResponseDTO(Estado.ERROR, null, null);                                                                                                 
-            var disponibilidades = await _comunes.FormateadoTariffReserva(
-                resultado,
-                cachedResult.Precio.Total.Moneda,
-                busqueda.MarkUps,
-                noFormateo,
-                tokenCancelacion).ConfigureAwait(false);
 
-            swRepo.Stop();
+            if (cachedResult == null)
+            {
+                _logger.ErrorLog(referencia, idPreReserva, evento, codigoIntegracion, "INeedTours: no hay pre-reserva cacheada para confirmar (cache miss).");
+                return new ReservaResponseDTO(Estado.ERROR, null, null);
+            }
 
-            return disponibilidades;
+            ReservaResponseDTO? resultado = null;
+
+            try
+            {
+                var swRepo = Stopwatch.StartNew();
+
+                resultado = await _INeedToursRepositorio.ReservaAsync(peticion, busqueda, credencial, cachedResult, tokenCancelacion).ConfigureAwait(false);
+                swRepo.Stop();
+                _logger.TiempoRepositorio(referencia, idPreReserva, evento, codigoIntegracion, swRepo.Elapsed.TotalSeconds);
+
+                if (resultado == null || resultado.Estado != Estado.OK)
+                {
+                    _logger.ErrorLog(referencia, idPreReserva, evento, codigoIntegracion, "INeedTours: no fue posible confirmar la reserva.");
+                    return new ReservaResponseDTO(Estado.ERROR, null, null);
+                }
+
+                if (resultado.Precio == null)
+                {
+                    _logger.ErrorLog(referencia, idPreReserva, evento, codigoIntegracion, "INeedTours: la reserva se confirmo pero no se pudo extraer el precio del COMMIT.");
+                    return new ReservaResponseDTO(Estado.ERROR, null, null);
+                }
+
+                var disponibilidades = await _comunes.FormateadoTariffReserva(
+                    resultado,
+                    cachedResult.Precio.Total.Moneda,
+                    busqueda.MarkUps,
+                    noFormateo,
+                    tokenCancelacion).ConfigureAwait(false);
+
+                stopwatch.Stop();
+                _logger.FinIntegracion(referencia, idPreReserva, evento, codigoIntegracion, stopwatch.Elapsed.TotalSeconds);
+
+                return disponibilidades;
+            }
+            catch (ExepcionConvitiendoTrm)
+            {
+                _logger.ErrorLog(referencia, idPreReserva, evento, codigoIntegracion,
+                    $"INeedTours: sin TRM para convertir a {cachedResult?.Precio?.Total?.Moneda}. Se devuelve la reserva en la moneda del proveedor.");
+                return resultado ?? new ReservaResponseDTO(Estado.ERROR, null, null);
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorLog(referencia, idPreReserva, evento, codigoIntegracion, $"Error en reserva INeedTours: {ex.Message}");
+            }
+
+            return new ReservaResponseDTO(Estado.ERROR, null, null);
         }
         public async Task<CancelacionResponseDTO> CancelacionAsync(CancelacionDTO peticion, List<IntegracionDTO> listaCredenciales, CancellationToken tokenCancelacion)
         {

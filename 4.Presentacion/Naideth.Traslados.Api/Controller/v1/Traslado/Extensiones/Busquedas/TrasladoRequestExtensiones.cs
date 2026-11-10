@@ -124,7 +124,7 @@ namespace Naideth.Traslados.Api.Controllers.v1.Traslado.Extensiones.Busquedas
             return new FiltroRequestDTO(
                 precio,
                 fuentes,
-                fil.MarkUps,
+                fil.MarkUps??0,
                 fil.Ordenamiento,
                 nombres,
                 fil.NoFormateo ?? false

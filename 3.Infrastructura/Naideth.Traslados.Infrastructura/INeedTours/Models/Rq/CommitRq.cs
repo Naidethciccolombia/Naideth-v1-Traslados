@@ -179,9 +179,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours.Models.Rq
 
     public class CommitTransfer
     {
-        [XmlAttribute("ContactPhone")]
-        public string? ContactPhone { get; set; }
-
         [XmlAttribute("TransportCompany")]
         public string? TransportCompany { get; set; }
 

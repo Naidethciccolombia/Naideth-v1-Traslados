@@ -12,6 +12,7 @@ using Naideth.Traslados.Aplicacion.Comunes.DTO.Rs;
 using Naideth.Traslados.Aplicacion.PreReservas.DTO.Rq;
 using Naideth.Traslados.Aplicacion.Reservas.DTO.Rq;
 using Naideth.Traslados.Aplicacion.Reservas.DTO.Rs;
+using Naideth.Traslados.Aplicacion.ConexionesExternas.DTO;
 using Naideth.Traslados.Aplicacion.ConexionesExternas.Interfaces;
 using Naideth.Traslados.Dominio.Busquedas;
 using Naideth.Traslados.Dominio.Estados;
@@ -107,22 +108,9 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
                 var dataJson = JsonSerializer.Serialize(rq, OpcionesJson);
                 var url = $"{credencial.EndPoint.TrimEnd('/')}{RutaCotizar}?currency={peticion.Moneda}&language={ObtenerIdioma(credencial)}";
 
-                var headers = new Dictionary<string, string>
-                {
-                    { "Authorization", $"bearer {ObtenerToken(credencial)}" },
-                    { "Accept", "application/json" }
-                };
-
                 _logger.FinPeticionGds(peticion.Referencia, idBusqueda, evento, credencial.codigo, 0, $"Inicio Peticion Civitatis COTIZAR = {dataJson}");
 
-                using var ctsTimeout = CancellationTokenSource.CreateLinkedTokenSource(TokenCancelacion);
-                ctsTimeout.CancelAfter(TimeSpan.FromSeconds(TimeOutSegundos));
-
-                var respuesta = await _conexionesExternasRepositorio.PeticionExternaTravelKitAsync(
-                    idBusqueda, peticion.Referencia, credencial.codigo,
-                    new StringContent(dataJson, Encoding.UTF8, "application/json"),
-                    headers, new List<string>(), url, "POST",
-                    ctsTimeout.Token, TimeOutSegundos, false).ConfigureAwait(false);
+                var respuesta = await EjecutarPeticionAsync(idBusqueda, peticion.Referencia, dataJson, url, "POST", credencial, TokenCancelacion).ConfigureAwait(false);
 
                 if (respuesta == null || respuesta.Status == false || respuesta.Ex != null)
                 {
@@ -175,19 +163,17 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
                     return new ResponseDTO(Estado.ERROR, null);
                 }
 
-                CotizacionRs? cotizacion;
-                try
-                {
-                    cotizacion = JsonSerializer.Deserialize<CotizacionRs>(jsonCotizacion, OpcionesJson);
-                }
-                catch (JsonException)
-                {
-                    cotizacion = null;
-                }
+                var cotizacion = Deserializar<CotizacionRs>(jsonCotizacion);
 
                 if (cotizacion == null)
                 {
                     _logger.ErrorLog(referencia, idBusqueda, evento, credencial.codigo, "Civitatis: la cotizacion en cache no pudo interpretarse.");
+                    return new ResponseDTO(Estado.ERROR, null);
+                }
+
+                if (busqueda?.Trayectos == null || busqueda.Trayectos.Count == 0)
+                {
+                    _logger.ErrorLog(referencia, idBusqueda, evento, credencial.codigo, "Civitatis: no hay trayectos para reconstruir la pre-reserva.");
                     return new ResponseDTO(Estado.ERROR, null);
                 }
 
@@ -322,26 +308,57 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
             return string.IsNullOrWhiteSpace(credencial.Clave) ? string.Empty : credencial.Clave;
         }
 
+        private static Dictionary<string, string> CrearHeaders(IntegracionDTO credencial) => new Dictionary<string, string>
+        {
+            { "Authorization", $"bearer {ObtenerToken(credencial)}" },
+            { "Accept", "application/json" }
+        };
+
+        private static T? Deserializar<T>(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return default;
+
+            try
+            {
+                return JsonSerializer.Deserialize<T>(json, OpcionesJson);
+            }
+            catch (JsonException)
+            {
+                return default;
+            }
+        }
+
+        private async Task<ResponseTravelKitStatusDTO?> EjecutarPeticionAsync(
+            Guid id, string referencia, string? bodyJson, string url, string metodo,
+            IntegracionDTO credencial, CancellationToken TokenCancelacion)
+        {
+            using var ctsTimeout = CancellationTokenSource.CreateLinkedTokenSource(TokenCancelacion);
+            ctsTimeout.CancelAfter(TimeSpan.FromSeconds(TimeOutSegundos));
+
+            var contenido = bodyJson == null ? null : new StringContent(bodyJson, Encoding.UTF8, "application/json");
+
+            return await _conexionesExternasRepositorio.PeticionExternaTravelKitAsync(
+                id, referencia, credencial.codigo, contenido!, CrearHeaders(credencial), new List<string>(), url, metodo,
+                ctsTimeout.Token, TimeOutSegundos, false).ConfigureAwait(false);
+        }
+
         private async Task<List<DisponibilidadDTO>?> ProcesarRespuestaBusquedaAsync(string? json, Busqueda peticion, IntegracionDTO credencial, CancellationToken TokenCancelacion)
         {
             if (string.IsNullOrWhiteSpace(json))
                 return null;
 
-            CotizarRs? respuesta;
-            try
-            {
-                respuesta = JsonSerializer.Deserialize<CotizarRs>(json, OpcionesJson);
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
-
+            var respuesta = Deserializar<CotizarRs>(json);
             if (respuesta == null)
                 return null;
 
             if (!string.IsNullOrWhiteSpace(respuesta.Error) || !string.IsNullOrWhiteSpace(respuesta.Message))
+            {
+                var detalle = string.Join(" | ", new[] { respuesta.Error, respuesta.Message }.Where(v => !string.IsNullOrWhiteSpace(v)));
+                _logger.ErrorLog(peticion.Referencia, peticion.IdBusqueda, "Busqueda", credencial.codigo,
+                    $"Civitatis rechazo la busqueda: {detalle}");
                 return null;
+            }
 
             var lista = new List<DisponibilidadDTO>();
 
@@ -612,22 +629,9 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
                 var dataJson = JsonSerializer.Serialize(rq, OpcionesJsonReserva);
                 var url = $"{credencial.EndPoint.TrimEnd('/')}{RutaReservar}";
 
-                var headers = new Dictionary<string, string>
-                {
-                    { "Authorization", $"bearer {ObtenerToken(credencial)}" },
-                    { "Accept", "application/json" }
-                };
-
                 _logger.FinPeticionGds(busqueda.Referencia, idPreReserva, evento, credencial.codigo, 0, $"Inicio Peticion Civitatis BOOK = {dataJson}");
 
-                using var ctsTimeout = CancellationTokenSource.CreateLinkedTokenSource(TokenCancelacion);
-                ctsTimeout.CancelAfter(TimeSpan.FromSeconds(TimeOutSegundos));
-
-                var respuesta = await _conexionesExternasRepositorio.PeticionExternaTravelKitAsync(
-                    idPreReserva, busqueda.Referencia, credencial.codigo,
-                    new StringContent(dataJson, Encoding.UTF8, "application/json"),
-                    headers, new List<string>(), url, "POST",
-                    ctsTimeout.Token, TimeOutSegundos, false).ConfigureAwait(false);
+                var respuesta = await EjecutarPeticionAsync(idPreReserva, busqueda.Referencia, dataJson, url, "POST", credencial, TokenCancelacion).ConfigureAwait(false);
 
                 if (respuesta == null)
                 {
@@ -638,14 +642,18 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
                 var reserva = ProcesarRespuestaReserva(respuesta.Data?.ToString());
                 if (reserva == null || string.IsNullOrWhiteSpace(reserva.CartId))
                 {
-                    var motivo = string.IsNullOrWhiteSpace(reserva?.Message)
-                        ? (reserva?.Error ?? respuesta.Ex?.Message ?? "No fue posible confirmar la reserva en Civitatis.")
-                        : reserva.Message;
+                    var motivo = string.Join(" | ", new[] { reserva?.Error, reserva?.Message, respuesta.Ex?.Message }
+                        .Where(v => !string.IsNullOrWhiteSpace(v)));
+                    if (string.IsNullOrWhiteSpace(motivo))
+                        motivo = "No fue posible confirmar la reserva en Civitatis.";
                     _logger.ErrorLog(busqueda.Referencia, idPreReserva, evento, credencial.codigo, motivo);
                     return new ReservaResponseDTO(Estado.ERROR, string.Empty, null);
                 }
 
                 var precioReserva = MapearPrecioReserva(reserva, credencial);
+                if (precioReserva.Total.Valor == 0m)
+                    _logger.ErrorLog(busqueda.Referencia, idPreReserva, evento, credencial.codigo,
+                        "Civitatis: el precio de la reserva llego en 0. Revise la respuesta BOOK (price.total.amount).");
                 var cartId = reserva.CartId!;
 
                 var confirmacion = await ConfirmarCarritoAsync(cartId, peticion, busqueda, credencial, TokenCancelacion).ConfigureAwait(false);
@@ -694,21 +702,9 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
             {
                 var url = $"{ObtenerEndpointConfirmacion(credencial)}{string.Format(RutaCancelarItems, Uri.EscapeDataString(peticion.Localizador))}";
 
-                var headers = new Dictionary<string, string>
-                {
-                    { "Authorization", $"bearer {ObtenerToken(credencial)}" },
-                    { "Accept", "application/json" }
-                };
-
                 _logger.FinPeticionGds(peticion.Localizador, Guid.Empty, evento, credencial.codigo, 0, $"Inicio Peticion Civitatis CANCELAR = {url}");
 
-                using var ctsTimeout = CancellationTokenSource.CreateLinkedTokenSource(TokenCancelacion);
-                ctsTimeout.CancelAfter(TimeSpan.FromSeconds(TimeOutSegundos));
-
-                var respuesta = await _conexionesExternasRepositorio.PeticionExternaTravelKitAsync(
-                    Guid.Empty, peticion.Localizador, credencial.codigo,
-                    null!, headers, new List<string>(), url, "DELETE",
-                    ctsTimeout.Token, TimeOutSegundos, false).ConfigureAwait(false);
+                var respuesta = await EjecutarPeticionAsync(Guid.Empty, peticion.Localizador, null, url, "DELETE", credencial, TokenCancelacion).ConfigureAwait(false);
 
                 if (respuesta == null)
                     return new CancelacionResponseDTO(Estado.ERROR, peticion.Source, peticion.Localizador, "Sin respuesta del proveedor al cancelar la reserva.");
@@ -798,15 +794,8 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
             if (string.IsNullOrWhiteSpace(jsonCotizacion))
                 return null;
 
-            try
-            {
-                var cotizacion = JsonSerializer.Deserialize<CotizacionRs>(jsonCotizacion, OpcionesJson);
-                return cotizacion?.Segments?.Select(s => s.BookingRequirements ?? new List<string>()).ToList();
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
+            var cotizacion = Deserializar<CotizacionRs>(jsonCotizacion);
+            return cotizacion?.Segments?.Select(s => s.BookingRequirements ?? new List<string>()).ToList();
         }
 
         private async Task<DetallesTransferReservarRq?> ObjetoDetallesTransferAsync(Trayecto trayecto, List<string>? requisitos, string? comentarios, Busqueda busqueda, IntegracionDTO credencial, CancellationToken TokenCancelacion)
@@ -882,19 +871,7 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
         }
 
         private static ReservarRs? ProcesarRespuestaReserva(string? json)
-        {
-            if (string.IsNullOrWhiteSpace(json))
-                return null;
-
-            try
-            {
-                return JsonSerializer.Deserialize<ReservarRs>(json, OpcionesJson);
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
-        }
+            => Deserializar<ReservarRs>(json);
 
         private static PrecioReservaDTO MapearPrecioReserva(ReservarRs reserva, IntegracionDTO credencial)
         {
@@ -919,24 +896,11 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
             var dataJson = JsonSerializer.Serialize(rq, OpcionesJsonReserva);
             var url = $"{ObtenerEndpointConfirmacion(credencial)}{string.Format(RutaConfirmarCarrito, Uri.EscapeDataString(cartId))}";
 
-            var headers = new Dictionary<string, string>
-            {
-                { "Authorization", $"bearer {ObtenerToken(credencial)}" },
-                { "Accept", "application/json" }
-            };
-
             for (var intento = 1; intento <= IntentosConfirmacionCarrito; intento++)
             {
                 _logger.FinPeticionGds(busqueda.Referencia, peticion.IdPreReserva, evento, credencial.codigo, 0, $"Inicio Peticion Civitatis CONFIRM (intento {intento}/{IntentosConfirmacionCarrito}) = {dataJson}");
 
-                using var ctsTimeout = CancellationTokenSource.CreateLinkedTokenSource(TokenCancelacion);
-                ctsTimeout.CancelAfter(TimeSpan.FromSeconds(TimeOutSegundos));
-
-                var respuesta = await _conexionesExternasRepositorio.PeticionExternaTravelKitAsync(
-                    peticion.IdPreReserva, busqueda.Referencia, credencial.codigo,
-                    new StringContent(dataJson, Encoding.UTF8, "application/json"),
-                    headers, new List<string>(), url, "POST",
-                    ctsTimeout.Token, TimeOutSegundos, false).ConfigureAwait(false);
+                var respuesta = await EjecutarPeticionAsync(peticion.IdPreReserva, busqueda.Referencia, dataJson, url, "POST", credencial, TokenCancelacion).ConfigureAwait(false);
 
                 if (respuesta == null)
                     return (false, null, "Sin respuesta del proveedor al confirmar el carrito.");
@@ -980,19 +944,7 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
         }
 
         private static ConfirmarRs? ProcesarRespuestaConfirmacion(string? json)
-        {
-            if (string.IsNullOrWhiteSpace(json))
-                return null;
-
-            try
-            {
-                return JsonSerializer.Deserialize<ConfirmarRs>(json, OpcionesJson);
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
-        }
+            => Deserializar<ConfirmarRs>(json);
 
         private static string ObtenerEndpointConfirmacion(IntegracionDTO credencial)
         {
@@ -1067,21 +1019,9 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
         {
             var url = $"{ObtenerEndpointConfirmacion(credencial)}{string.Format(RutaDetallesReserva, Uri.EscapeDataString(bookingId))}";
 
-            var headers = new Dictionary<string, string>
-            {
-                { "Authorization", $"bearer {ObtenerToken(credencial)}" },
-                { "Accept", "application/json" }
-            };
-
             _logger.FinPeticionGds(bookingId, Guid.Empty, "ConsultarDetallesReserva", credencial.codigo, 0, $"Inicio Peticion Civitatis DETALLES = {url}");
 
-            using var ctsTimeout = CancellationTokenSource.CreateLinkedTokenSource(TokenCancelacion);
-            ctsTimeout.CancelAfter(TimeSpan.FromSeconds(TimeOutSegundos));
-
-            var respuesta = await _conexionesExternasRepositorio.PeticionExternaTravelKitAsync(
-                Guid.Empty, bookingId, credencial.codigo,
-                null!, headers, new List<string>(), url, "GET",
-                ctsTimeout.Token, TimeOutSegundos, false).ConfigureAwait(false);
+            var respuesta = await EjecutarPeticionAsync(Guid.Empty, bookingId, null, url, "GET", credencial, TokenCancelacion).ConfigureAwait(false);
 
             if (respuesta == null || !EsExitoso(respuesta.StatusCode))
                 return null;
@@ -1091,28 +1031,7 @@ namespace Naideth.Traslados.Infrastructura.Civitatis
         }
 
         private static DetallesReservaRs? ProcesarRespuestaDetallesReserva(string? json)
-        {
-            if (string.IsNullOrWhiteSpace(json))
-                return null;
-
-            try
-            {
-                return JsonSerializer.Deserialize<DetallesReservaRs>(json, OpcionesJson);
-            }
-            catch (JsonException)
-            {
-            }
-
-            try
-            {
-                var lista = JsonSerializer.Deserialize<List<DetallesReservaRs>>(json, OpcionesJson);
-                return lista?.FirstOrDefault();
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
-        }
+            => Deserializar<DetallesReservaRs>(json) ?? Deserializar<List<DetallesReservaRs>>(json)?.FirstOrDefault();
 
         private static bool EsExitoso(System.Net.HttpStatusCode codigo)
         {

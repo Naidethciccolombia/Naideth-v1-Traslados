@@ -14,6 +14,8 @@ namespace Naideth.Traslados.Aplicacion.Busquedas.DTO.Rs
 
         public bool Obligatorio { get; set; }
 
+        public bool PorPersona { get; set; }
+
         public bool Garantizado { get; set; }
 
         public string? Especificaciones { get; set; }

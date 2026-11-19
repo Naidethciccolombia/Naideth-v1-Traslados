@@ -22,6 +22,8 @@ namespace Naideth.Traslados.Aplicacion.Busquedas.DTO.Rs
 
         public string? HoraInicio { get; set; }
 
+        public string? HoraDisponibilidad { get; set; }
+
         public string? EsperaMaxima { get; set; }
 
         public int? CantidadPasajeros { get; set; }

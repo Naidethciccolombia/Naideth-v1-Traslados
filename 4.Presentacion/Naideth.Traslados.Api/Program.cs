@@ -157,7 +157,7 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-builder.Services.AddTransient<AuthorizationMiddleware>();
+builder.Services.AddTransient<AuthorizationMiddleware>(); 
 
 builder.Services.AddMemoryCache(options => {
     options.SizeLimit = 800 * 1024 * 1024; // 500 MB

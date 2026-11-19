@@ -2,11 +2,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Naideth.Traslados.Aplicacion.AutenticacionRemota.Interfaces;
 using Naideth.Traslados.Aplicacion.Busquedas.Interfaces;
 using Naideth.Traslados.Aplicacion.Cancelaciones.Interfaces;
 using Naideth.Traslados.Aplicacion.Ciudades.Interfaces;
-using Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces;
 using Naideth.Traslados.Aplicacion.Componentes.Civitatis.Interfaces;
+using Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces;
 using Naideth.Traslados.Aplicacion.Comunes.Interfaces;
 using Naideth.Traslados.Aplicacion.ConexionesExternas.Interfaces;
 using Naideth.Traslados.Aplicacion.ConvercionMoneda.Interfaces;
@@ -17,12 +18,13 @@ using Naideth.Traslados.Aplicacion.UsuariosRoles.Interfaces;
 using Naideth.Traslados.Aplicacion.UsuariosTenant.Interface;
 using Naideth.Traslados.Infrastructura.AccesoDatos;
 using Naideth.Traslados.Infrastructura.AccesoDatos.interfaces; 
+using Naideth.Traslados.Infrastructura.AutenticacionRemota;
 using Naideth.Traslados.Infrastructura.Ciudades;
+using Naideth.Traslados.Infrastructura.Civitatis;
 using Naideth.Traslados.Infrastructura.Comunes;
 using Naideth.Traslados.Infrastructura.ConexionesExternas;
 using Naideth.Traslados.Infrastructura.ConvercionMoneda; 
 using Naideth.Traslados.Infrastructura.INeedTours;
-using Naideth.Traslados.Infrastructura.Civitatis;
 using Naideth.Traslados.Infrastructura.Usuarios;
 using Naideth.Traslados.Infrastructura.UsuariosRoles;
 using Naideth.Traslados.Infrastructura.UsuariosTenant;
@@ -53,8 +55,13 @@ namespace Naideth.Traslados.Infrastructura
               servicios.AddScoped<ICivitatisRepositorio, CivitatisRepositorio>();
 
                   servicios.AddScoped<IConvercionMonedaRepositorio, ConvercionMonedaRepositorio>(); 
-                  servicios.AddScoped<IComunRepositorio, ComunRepositorio>();  
-             
+                  servicios.AddScoped<IComunRepositorio, ComunRepositorio>();
+
+            servicios.AddHttpClient<IValidadorTokenRemoto, ValidadorTokenRemoto>(client =>
+            {
+                var timeoutSeconds = configuration.GetValue<int>("Autenticacion:HttpClient:TimeoutSeconds", 10);
+                client.Timeout = TimeSpan.FromSeconds(Math.Max(1, timeoutSeconds));
+            });
 
             servicios.AddHttpClient<IConexionesExternasRepositorio, ConexionesExternasRepositorio>()
                     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler

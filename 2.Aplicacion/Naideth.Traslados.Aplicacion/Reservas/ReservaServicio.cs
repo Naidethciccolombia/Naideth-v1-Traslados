@@ -1,4 +1,4 @@
-﻿using Azure;
+using Azure;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Naideth.Traslados.Aplicacion.AppLoggers.Interfaces;
@@ -33,6 +33,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces;
+using Naideth.Traslados.Aplicacion.Componentes.Civitatis.Interfaces;
 
 namespace Naideth.Traslados.Aplicacion.Reservas
 {
@@ -42,6 +43,7 @@ namespace Naideth.Traslados.Aplicacion.Reservas
 
         //private readonly ITravelKitServicio _TravelKitServicio;
         private readonly IINeedToursServicio _INeedToursServicio;
+        private readonly ICivitatisServicio _civitatisServicio;
         private readonly ICacheRedisServicio _cacheServicio;
         private readonly IAppLoggerServicio _logger;
         private readonly ICiudadServicio _ciudadServicio;
@@ -49,11 +51,12 @@ namespace Naideth.Traslados.Aplicacion.Reservas
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(100);
          
 
-        public ReservaServicio(ICiudadServicio ciudadServicio, IComunRepositorio comunRepositorio, IINeedToursServicio ineedToursServicio, ICacheRedisServicio cacheServicio, IAppLoggerServicio logger
+        public ReservaServicio(ICiudadServicio ciudadServicio, IComunRepositorio comunRepositorio, IINeedToursServicio ineedToursServicio, ICivitatisServicio civitatisServicio, ICacheRedisServicio cacheServicio, IAppLoggerServicio logger
         )
         {
             //_TravelKitServicio = travelKitServicioServicio;
             _INeedToursServicio = ineedToursServicio;
+            _civitatisServicio = civitatisServicio;
             _comunRepositorio = comunRepositorio;
             _cacheServicio = cacheServicio;
             _ciudadServicio = ciudadServicio;
@@ -80,7 +83,13 @@ namespace Naideth.Traslados.Aplicacion.Reservas
                     throw new CacheBusquedaNoEncontrada();
                 }
 
-                string SourceName = string.Empty;
+                if (cachedResult.disponibilidad == null)
+                {
+                    _logger.ErrorLog(cachedResult.busqueda.referencia, peticion.IdPreReserva, "Reserva", string.Empty, "No hay disponibilidad cacheada para la pre-reserva.");
+                    throw new DisponibilidadNoEncontrada();
+                }
+
+                string Source = string.Empty;
 
       
                 if (cachedResult.disponibilidad != null)
@@ -88,7 +97,7 @@ namespace Naideth.Traslados.Aplicacion.Reservas
          
                   var disponibilidadSeleccionada = cachedResult.disponibilidad;
                      
-                    SourceName = disponibilidadSeleccionada.SourceName;
+                    Source = disponibilidadSeleccionada.Source;
 
                   var ListaCredenciales = await _comunRepositorio.CredencialesAsync(TokenCancelacion).ConfigureAwait(false);
 
@@ -108,17 +117,20 @@ namespace Naideth.Traslados.Aplicacion.Reservas
 
                     var busqueda = Busqueda.Crear(Guid.NewGuid(), trayectos, pais, cachedResult.busqueda.moneda, cachedResult.busqueda.referencia, false, cachedResult.busqueda.Filtros.MarkUps);
 
+                    var noFormateo = cachedResult.busqueda.Filtros.noFormateo;
+
                     var pasajeros = cachedResult.busqueda.pasajeros.Select(p =>
                         Pasajero.Crear(p.cantidad, p.tipo, p.edad, (p.upgrade != null ? new List<int> { p.upgrade.Value } : new List<int>()))
                     ).ToList();
 
                     busqueda.ListPasajeros(pasajeros);
 
-                    result = SourceName switch
+                    result = Source switch
                         {
                             //"TravelKit" => await _TravelKitServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
-                            "INT" => await _INeedToursServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
-                            _ => null
+                            "INT" => await _INeedToursServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, noFormateo, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
+                            "CIV" => await _civitatisServicio.ReservaAsync(peticion, busqueda, cachedResult.disponibilidad, noFormateo, ListaCredenciales, TokenCancelacion).ConfigureAwait(false),
+                            _ => throw new ExepcionExternaMensaje($"No hay integrador configurado para la fuente {Source}")
                         };
 
                       

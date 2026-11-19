@@ -5,10 +5,6 @@ using System.Xml.Serialization;
 
 namespace Naideth.Traslados.Infrastructura.INeedTours.Models.Rq
 {
-    /// <summary>
-    /// Peticion SOAP DestServicesCommitV2 (confirmacion de reserva) para INeedTours.
-    /// Estructura basada en la documentacion COMMIT-RQ.html del proveedor.
-    /// </summary>
     [XmlRoot("Envelope", Namespace = SoapEnvelopeNamespace)]
     public class CommitRq
     {
@@ -183,9 +179,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours.Models.Rq
 
     public class CommitTransfer
     {
-        [XmlAttribute("ContactPhone")]
-        public string? ContactPhone { get; set; }
-
         [XmlAttribute("TransportCompany")]
         public string? TransportCompany { get; set; }
 

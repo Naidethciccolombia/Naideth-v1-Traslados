@@ -168,6 +168,16 @@ namespace Naideth.Traslados.Dominio.Kernel.Exepciones
     }
     #endregion CacheBusquedaNoEncontrada
 
+    #region DisponibilidadNoEncontrada
+    public sealed class DisponibilidadNoEncontrada : Exception, IExcepcion
+    {
+        public int Codigo => StatusCodes.Status404NotFound;
+        public string Titulo => "Alerta";
+        public string Mensaje => "Disponibilidad No Encontrada En La Busqueda. Verifique que el IdTarifa corresponda a la busqueda realizada.";
+
+    }
+    #endregion DisponibilidadNoEncontrada
+
     #region ExepcionExternaMensaje
     public sealed class ExepcionExternaMensaje : Exception, IExcepcion
     {

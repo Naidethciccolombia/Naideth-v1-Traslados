@@ -11,6 +11,7 @@ using Naideth.Traslados.Aplicacion.CacheRedis.DTO;
 using Naideth.Traslados.Aplicacion.CacheRedis.Interfaces;
 using Naideth.Traslados.Aplicacion.Ciudades.Interfaces;
 using Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces;
+using Naideth.Traslados.Aplicacion.Componentes.Civitatis.Interfaces;
 using Naideth.Traslados.Aplicacion.Comunes.DTO.Rq;
 using Naideth.Traslados.Aplicacion.Comunes.Interfaces;
 using Naideth.Traslados.Aplicacion.Kernel;
@@ -37,6 +38,7 @@ namespace Naideth.Traslados.Aplicacion.Busquedas
        //private readonly ITravelKitServicio _TravelKitServicio;
        
         private readonly IINeedToursServicio _INeedToursServicio;
+        private readonly ICivitatisServicio _civitatisServicio;
         private readonly CacheSettings _settings; 
         private readonly ICiudadServicio _ciudadServicio;
 
@@ -53,6 +55,7 @@ namespace Naideth.Traslados.Aplicacion.Busquedas
             MetodosComunes comunes,
             IComunRepositorio comunRepositorio, 
             IINeedToursServicio ineedToursServicio,
+            ICivitatisServicio civitatisServicio,
             //ITravelKitServicio TravelKitServicio,   
             ICacheRedisServicio cacheServicio,
             ICiudadServicio ciudadServicio,
@@ -68,6 +71,7 @@ namespace Naideth.Traslados.Aplicacion.Busquedas
             _logger = logger;
             _preResevaServicio = preResevaServicio; 
             _INeedToursServicio = ineedToursServicio;
+            _civitatisServicio = civitatisServicio;
             _settings = options.Value;
 
         }
@@ -485,6 +489,7 @@ CancellationToken token)
 
             //listaTareas.Add(("TravelKit", _TravelKitServicio.BusquedaAsync(busqueda, listaCredenciales, filtros, CrearTokenIntegrador())));
             listaTareas.Add(("INeedTours", _INeedToursServicio.BusquedaAsync(busqueda, listaCredenciales, filtros, CrearTokenIntegrador())));
+            listaTareas.Add(("Civitatis", _civitatisServicio.BusquedaAsync(busqueda, listaCredenciales, filtros, CrearTokenIntegrador())));
 
 
             return listaTareas;

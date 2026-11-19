@@ -5,10 +5,6 @@ using System.Xml.Serialization;
 
 namespace Naideth.Traslados.Infrastructura.INeedTours.Models.Rq
 {
-    /// <summary>
-    /// Peticion SOAP DestServicesBookV2 (add to cart / pre-book) para INeedTours.
-    /// Estructura basada en la documentacion BOOK-RQ.html del proveedor.
-    /// </summary>
     [XmlRoot("Envelope", Namespace = SoapEnvelopeNamespace)]
     public class BookRq
     {

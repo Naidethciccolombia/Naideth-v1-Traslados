@@ -38,6 +38,7 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
         private const string TipoAdulto = "ADT";
         private const string TipoAdultoLider = "ADL";
         private const string TipoNino = "CHL";
+        private const string TipoNinoDominio = "CHD";
         private const string CategoriaTraslado = "Traslado";
         private const string MonedaPorDefecto = "EUR";
         private const string BeneficioContenido = "contenido";
@@ -200,6 +201,13 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 return new ReservaResponseDTO(Estado.ERROR, string.Empty, null);
             }
 
+            if (string.IsNullOrWhiteSpace(tarifaSeleccionada.DatosTarifa?.ConceptoReserva))
+            {
+                _logger.ErrorLog(busqueda.Referencia, idPreReserva, evento, credencial.codigo,
+                    "INeedTours: no hay ConceptoReserva (respuesta BOOK) para armar el commit.");
+                return new ReservaResponseDTO(Estado.ERROR, string.Empty, null);
+            }
+
             var stopwatchTotal = Stopwatch.StartNew();
 
             try
@@ -331,19 +339,12 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
         #region Privados
 
-        /// <summary>
-        /// Envia una peticion SOAP al proveedor con los headers y timeout estandar,
-        /// registrando el inicio y el fin en el logger GDS. Devuelve el XML de la
-        /// respuesta, o null si la llamada fallo (en cuyo caso el error ya queda logueado).
-        /// </summary>
         private async Task<(string? Xml, string Error)> EnviarSoapAsync(Guid id, string referencia, string evento, string nombreLog, string dataXml, IntegracionDTO credencial, CancellationToken TokenCancelacion)
         {
             var stopwatchExterno = Stopwatch.StartNew();
 
             _logger.FinPeticionGds(referencia, id, evento, credencial.codigo, stopwatchExterno.Elapsed.TotalSeconds, $"Inicio {nombreLog} = {dataXml}");
 
-            // Postman no envia SOAPAction para este ASMX y responde correctamente;
-            // un SOAPAction vacio provoca un 500 en el servidor, por eso se omite.
             Dictionary<string, string> headers = new Dictionary<string, string>()
             {
                 { "Content-Type", "text/xml" }
@@ -357,7 +358,9 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 ctsTimeout.Token, 60, false).ConfigureAwait(false);
 
             stopwatchExterno.Stop();
-            _logger.FinPeticionGds(referencia, id, evento, credencial.codigo, stopwatchExterno.Elapsed.TotalSeconds, $"Fin {nombreLog}");
+            var respuestaCruda = respuesta?.Data?.ToString() ?? string.Empty;
+            _logger.FinPeticionGds(referencia, id, evento, credencial.codigo, stopwatchExterno.Elapsed.TotalSeconds,
+                $"Fin {nombreLog} = {(respuestaCruda.Length > 8000 ? respuestaCruda.Substring(0, 8000) : respuestaCruda)}");
 
             if (respuesta == null || respuesta.Status == false)
             {
@@ -374,10 +377,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             return credencial.credencial.FirstOrDefault(c => c.nombre.Equals("Idioma", StringComparison.CurrentCultureIgnoreCase))?.valor ?? IdiomaPorDefecto;
         }
 
-        /// <summary>
-        /// Devuelve el texto del faultstring si la respuesta SOAP contiene un nodo Fault;
-        /// en caso contrario devuelve null. Si existe Fault pero no faultstring, usa un mensaje generico.
-        /// </summary>
         private static string? ObtenerFaultString(XDocument doc)
         {
             var fault = doc.Descendants().FirstOrDefault(e => e.Name.LocalName == NodoFault);
@@ -401,9 +400,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             objRequest.PrimaryLangID = idioma;
             objRequest.TransactionIdentifier = peticion.Localizador;
 
-            // CancelBookingItems queda null: se cancela la reserva completa
-            // (los items solo aplican para cancelaciones parciales).
-
             return rq;
         }
 
@@ -421,7 +417,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             objRequest.PrimaryLangID = idioma;
             objRequest.ServiceType = "T";
 
-            // Occupations: una entrada por cada edad de pasajero (ADT -> ADL, CHD/INF -> CHL).
             foreach (var pasajero in peticion.Pasajeros)
             {
                 var tipo = pasajero.Tipo == TipoAdulto ? TipoAdultoLider : TipoNino;
@@ -527,7 +522,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 return null;
             }
 
-            // Fault SOAP: se registra el faultstring y se devuelve null.
             var faultString = ObtenerFaultString(doc);
 
             if (faultString != null)
@@ -566,7 +560,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             return new DisponibilidadesDTO(credencial.CodigoIntegrador, credencial.nombre, disponibilidades);
         }
 
-        /// <summary>Datos de un AvailResponseV2Product necesarios para mapear sus conceptos.</summary>
         private record ProductoAvail(
             string? Nombre,
             string Categoria,
@@ -603,28 +596,54 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             var conceptCode = Valor(concepto, "ConceptCode") ?? string.Empty;
             var nombreConcepto = Valor(concepto, "ConceptName") ?? producto.Nombre;
 
-            var detalle = concepto.Elements().FirstOrDefault(e => e.Name.LocalName == NodoDetails)?
-                .Elements().FirstOrDefault(e => e.Name.LocalName == "AvailResponseV2Detail");
+            var detalles = concepto.Elements().FirstOrDefault(e => e.Name.LocalName == NodoDetails)?
+                .Elements().Where(e => e.Name.LocalName == "AvailResponseV2Detail").ToList() ?? new List<XElement>();
 
-            // Localizador del detalle seleccionado, requerido por DestServicesBookV2.
-            // En la respuesta es un ELEMENTO (<DetailBookingCode>...), no un atributo.
+            var detalle = detalles.FirstOrDefault();
+
             var localizador = Valor(detalle, "DetailBookingCode") ?? string.Empty;
 
-            var impuestos = detalle?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?
-                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+            // Detalles incluidos (IsOptional != true): servicio + suplementos obligatorios
+            // (nocturnidad, festivos...). El proveedor los incorpora solo al reservar.
+            var detallesIncluidos = detalles
+                .Where(d => !string.Equals(Valor(d, "IsOptional"), "true", StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-            var importe = impuestos?.Attribute(AtributoAmount) != null
-                ? DecimalAtributo(impuestos, AtributoAmount) ?? 0m
-                : producto.ImporteDesde ?? 0m;
+            var impuestos = ImpuestosDetalle(detalle);
+
+            var importeIncluido = detallesIncluidos.Sum(d => DecimalAtributo(ImpuestosDetalle(d), AtributoAmount) ?? 0m);
+            var importe = importeIncluido > 0m ? importeIncluido : producto.ImporteDesde ?? 0m;
 
             var moneda = impuestos?.Attribute(AtributoCurrencyCode)?.Value ?? producto.MonedaDesde;
 
-            var comisiones = impuestos?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoCommissions);
+            var precioVenta = detallesIncluidos.Sum(d => DecimalElemento(ComisionesDetalle(d), NodoSellingPrice) ?? 0m);
+            if (precioVenta == 0m)
+                precioVenta = importe;
 
-            var precioVenta = DecimalElemento(comisiones, NodoSellingPrice) ?? importe;
-            var precioNeto = DecimalElemento(comisiones, NodoNetAmount) ?? precioVenta;
+            var precioNeto = detallesIncluidos.Sum(d => DecimalElemento(ComisionesDetalle(d), NodoNetAmount) ?? 0m);
+            if (precioNeto == 0m)
+                precioNeto = precioVenta;
 
             var impuesto = precioVenta - precioNeto;
+
+            // Suplementos: solo obligatorios (IsOptional != true); los opcionales no se exponen
+            // ni se envian en BOOK hasta que el front soporte su seleccion.
+            var extras = detalles.Skip(1)
+                .Where(d => !string.Equals(Valor(d, "IsOptional"), "true", StringComparison.OrdinalIgnoreCase))
+                .Select(d =>
+                {
+                    var impuestosDetalle = ImpuestosDetalle(d);
+
+                    return new DatosExtraDTO
+                    {
+                        Id = Valor(d, "DetailBookingCode") ?? string.Empty,
+                        Descripcion = Valor(d, "DetailName") ?? string.Empty,
+                        Importe = DecimalAtributo(impuestosDetalle, AtributoAmount),
+                        Moneda = impuestosDetalle?.Attribute(AtributoCurrencyCode)?.Value ?? moneda,
+                        Obligatorio = true,
+                        PorPersona = string.Equals(Valor(d, "PerPerson"), "true", StringComparison.OrdinalIgnoreCase)
+                    };
+                }).ToList();
 
             // Horarios recalculados por el proveedor (si los devuelve).
             var transfer = concepto.Elements().FirstOrDefault(e => e.Name.LocalName == "Transfer");
@@ -637,48 +656,86 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
             var rangoEdad = $"{Valor(concepto, "AgeFrom")}-{Valor(concepto, "AgeTo")}";
 
+            // Ocupación y tipo de tarifa (clave para traslados compartidos).
+            int.TryParse(Valor(concepto, "MinimalUnits"), out var unidadesMinimas);
+            int.TryParse(Valor(concepto, "MaximumUnits"), out var unidadesMaximas);
+            bool.TryParse(Valor(concepto, "IsChild"), out var soloInfantil);
+            bool.TryParse(Valor(detalle, "PerPerson"), out var precioPorPersona);
+
+            var fechasDisponibilidad = concepto.Elements().FirstOrDefault(e => e.Name.LocalName == "BookOptions")?
+                .Elements().FirstOrDefault(e => e.Name.LocalName == "Availability")?
+                .Elements().Where(e => e.Name.LocalName == "AvailResponseV2Avail").ToList() ?? new List<XElement>();
+
+            // Avail de la fecha solicitada (BOOK espera el Hour devuelto en BookOptions).
+            var fechaBusqueda = peticion.Inicio.ToString("yyyy-MM-dd");
+            var disponibilidadConcepto = fechasDisponibilidad.FirstOrDefault(a => a.Attribute("Date")?.Value == fechaBusqueda) ?? fechasDisponibilidad.FirstOrDefault();
+            var estadoDisponibilidad = disponibilidadConcepto?.Attribute("Availability")?.Value ?? string.Empty;
+            var horaDisponibilidad = disponibilidadConcepto?.Attribute("Hour")?.Value ?? string.Empty;
+
+            var ninos = peticion.Pasajeros
+                .Where(p => !string.Equals(p.Tipo, TipoAdulto, StringComparison.OrdinalIgnoreCase))
+                .Sum(p => p.Cantidad);
+            var adultos = totalPax - ninos;
+
             var total = new TotalDTO(moneda, precioNeto, impuesto, precioVenta);
 
-            var precio = new PrecioDTO(total,
-                new List<PTCTotalDTO> { new PTCTotalDTO(TipoAdulto, 1, total) });
+            var precio = soloInfantil
+                ? new PrecioDTO(total, new List<PTCTotalDTO> { new PTCTotalDTO(TipoNinoDominio, ninos, total) })
+                : new PrecioDTO(total, new List<PTCTotalDTO> { new PTCTotalDTO(TipoAdulto, adultos, total) });
 
-            return new DisponibilidadDTO(
-                credencial.CodigoIntegrador,
-                credencial.nombre,
-                Guid.NewGuid().ToString(),
-                new List<TpaDTO> { new TpaDTO("MonedaOrigen", moneda) },
-                nombreConcepto ?? string.Empty,
-                producto.Dias,
-                CategoriaTraslado,
-                peticion.Inicio,
-                peticion.Fin,
-                imagen,
-                precio,
-                new List<TarifaDTO>
+            return new DisponibilidadDTO
+            {
+                Source = credencial.CodigoIntegrador,
+                SourceName = credencial.nombre,
+                Id = Guid.NewGuid().ToString(),
+                Auxiliares = new List<TpaDTO>
                 {
-                    new TarifaDTO(
-                        conceptoBookingCode,
-                        Guid.NewGuid().ToString(),
-                        producto.Categoria,
-                        string.Empty,
-                        string.Empty,
-                        nombreConcepto ?? string.Empty,
-                        beneficios,
-                        rangoEdad,
-                        totalPax,
-                        0,
-                        0,
-                        new List<UpgradesDTO>())
+                    new TpaDTO("MonedaOrigen", moneda),
+                    new TpaDTO("UnidadesMinimas", unidadesMinimas),
+                    new TpaDTO("UnidadesMaximas", unidadesMaximas),
+                    new TpaDTO("SoloInfantil", soloInfantil),
+                    new TpaDTO("PrecioPorPersona", precioPorPersona),
+                    new TpaDTO("EstadoDisponibilidad", estadoDisponibilidad),
+                    new TpaDTO("HoraDisponibilidad", horaDisponibilidad)
+                },
+                Plan = nombreConcepto ?? string.Empty,
+                Duracion = producto.Dias,
+                Tipo = CategoriaTraslado,
+                FechaInicio = peticion.Inicio,
+                FechaSalida = peticion.Fin,
+                HoraInicio = horaRecogida,
+                HoraSalida = horaEntrega,
+                Imagen = imagen,
+                Precio = precio,
+                Tarifas = new List<TarifaDTO>
+                {
+                    new TarifaDTO
                     {
-                        Localizador = localizador,
-                        CodigoProducto = producto.CodigoProducto,
-                        CodigoAuxiliar = $"{echoToken}|{producto.ProductCode}|{conceptCode}",
-                        TipoVehiculo = producto.Nombre ?? nombreConcepto,
-                        ModeloVehiculo = modeloVehiculo,
-                        ImagenVehiculo = imagen,
-                        HoraInicio = horaRecogida
+                        Id = conceptoBookingCode,
+                        IdPreReserva = Guid.NewGuid().ToString(),
+                        Category = producto.Categoria,
+                        Nombre = nombreConcepto ?? string.Empty,
+                        Beneficios = beneficios,
+                        RangoEdad = rangoEdad,
+                        CantidadAdultos = adultos,
+                        CantidadNinos = ninos,
+                        CantidadInfantes = 0,
+                        DatosTarifa = new DatosTarifaDTO
+                        {
+                            Localizador = localizador,
+                            CodigoProducto = producto.CodigoProducto,
+                            CodigoAuxiliar = $"{echoToken}|{producto.ProductCode}|{conceptCode}",
+                            TipoVehiculo = producto.Nombre ?? nombreConcepto,
+                            ModeloVehiculo = modeloVehiculo,
+                            ImagenVehiculo = imagen,
+                            HoraInicio = horaRecogida,
+                            HoraDisponibilidad = string.IsNullOrWhiteSpace(horaDisponibilidad) ? null : horaDisponibilidad,
+                            CantidadPasajeros = unidadesMaximas > 0 ? unidadesMaximas : null,
+                            Extras = extras
+                        }
                     }
-                });
+                }
+            };
         }
 
         private static string ExtraerImagenProducto(XElement producto)
@@ -739,6 +796,17 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
         private static string? Valor(XElement? padre, string nombreLocal)
         {
             return padre?.Elements().FirstOrDefault(e => e.Name.LocalName == nombreLocal)?.Value;
+        }
+
+        private static XElement? ImpuestosDetalle(XElement? detalle)
+        {
+            return detalle?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?
+                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+        }
+
+        private static XElement? ComisionesDetalle(XElement? detalle)
+        {
+            return ImpuestosDetalle(detalle)?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoCommissions);
         }
 
         private static decimal? DecimalElemento(XElement? padre, string nombreLocal)
@@ -815,11 +883,11 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             objRequest.PrimaryLangID = idioma;
 
             // CodigoAuxiliar = "EchoToken|ProductCode|ConceptCode".
-            var auxiliares = tarifa.CodigoAuxiliar?.Split('|') ?? Array.Empty<string>();
+            var auxiliares = tarifa.DatosTarifa?.CodigoAuxiliar?.Split('|') ?? Array.Empty<string>();
 
             objRequest.EchoToken = auxiliares.ElementAtOrDefault(0) ?? string.Empty;
 
-            if (int.TryParse(tarifa.CodigoProducto, out var productBookingCode))
+            if (int.TryParse(tarifa.DatosTarifa?.CodigoProducto, out var productBookingCode))
             {
                 objRequest.ProductBookingCode = productBookingCode;
                 objRequest.ProductBookingCodeSpecified = true;
@@ -827,9 +895,11 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
             var concepto = new BookRequestV2Concept
             {
-                ConceptBookingCode = tarifa.Id,
+                ConceptBookingCode = auxiliares.ElementAtOrDefault(2) ?? string.Empty,
                 Quantity = 1,
-                QuantitySpecified = true
+                QuantitySpecified = true,
+                // Hour devuelto por el proveedor en BookOptions/Availability (si aplica).
+                Hour = tarifa.DatosTarifa?.HoraDisponibilidad
             };
 
             if (int.TryParse(auxiliares.ElementAtOrDefault(1), out var productCode))
@@ -844,14 +914,8 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 concepto.ConceptCodeSpecified = true;
             }
 
-            // Detalle opcional (DetailBookingCode) si el proveedor lo devolvio en la busqueda.
-            if (!string.IsNullOrWhiteSpace(tarifa.Localizador))
-            {
-                concepto.OptionalDetails = new List<OptionalDetail>
-                {
-                    new OptionalDetail { DetailBookingCode = tarifa.Localizador, Quantity = 1 }
-                };
-            }
+            // Suplementos incluidos (IsOptional != true) no se envian: el proveedor los incorpora solo.
+            // Los opcionales (IsOptional=true) se enviaran aqui cuando exista seleccion del usuario (escenario 8).
 
             objRequest.Concepts.Add(concepto);
 
@@ -876,7 +940,7 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
             var concepto = new CommitRequestV2Concept
             {
-                ConceptBookingCode = tarifa.ConceptoReserva ?? tarifa.Id,
+                ConceptBookingCode = tarifa.DatosTarifa?.ConceptoReserva ?? string.Empty,
                 Comments = peticion.Observaciones
             };
 
@@ -884,16 +948,20 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
 
             foreach (var pasajero in peticion.Pasajeros)
             {
-                DateTime.TryParse(pasajero.FechaNacimiento, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fechaNacimiento);
+                // BirthDate/Age son Required en COMMIT; sin fecha válida el proveedor rechazaría la reserva.
+                if (!DateTime.TryParse(pasajero.FechaNacimiento, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fechaNacimiento))
+                {
+                    throw new InvalidOperationException($"INeedTours: fecha de nacimiento no válida del pasajero {pasajero.Nombres} {pasajero.Apellidos} ({pasajero.FechaNacimiento}).");
+                }
 
                 var guest = new CommitGuest
                 {
                     GivenName = pasajero.Nombres,
                     Surname = pasajero.Apellidos,
-                    BirthDate = fechaNacimiento != default ? fechaNacimiento.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : pasajero.FechaNacimiento,
-                    Age = fechaNacimiento != default ? CalcularEdad(fechaNacimiento) : 0,
+                    BirthDate = fechaNacimiento.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    Age = CalcularEdad(fechaNacimiento),
                     DocumentID = string.IsNullOrWhiteSpace(pasajero.Documento) ? null : pasajero.Documento,
-                    Gender = string.IsNullOrWhiteSpace(pasajero.IdSexo) ? null : pasajero.IdSexo,
+                    Gender = NormalizarGenero(pasajero.IdSexo),
                     IsChild = !pasajero.Tipo.Equals(TipoAdulto, StringComparison.OrdinalIgnoreCase)
                 };
 
@@ -906,12 +974,6 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 }
 
                 concepto.Guests.Add(guest);
-            }
-
-            // Telefono de contacto del transfer (solo si el request lo trae).
-            if (!string.IsNullOrWhiteSpace(peticion.Telefono))
-            {
-                concepto.Transfer = new CommitTransfer { ContactPhone = peticion.Telefono };
             }
 
             objRequest.Concepts.Add(concepto);
@@ -930,30 +992,34 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
             return edad;
         }
 
-        private static IEnumerable<XElement> ExtraerDetallesReserva(XElement result)
+        // La doc COMMIT solo admite H (hombre) o M (mujer); cualquier otro valor se omite.
+        private static string? NormalizarGenero(string? idSexo)
+        {
+            var genero = idSexo?.Trim().ToUpperInvariant();
+
+            return genero is "H" or "M" ? genero : null;
+        }
+
+        private static IEnumerable<XElement> ExtraerConceptosReserva(XElement result)
         {
             return result.Elements()
                 .FirstOrDefault(e => e.Name.LocalName == NodoProducts)?
                 .Elements().Where(e => e.Name.LocalName == NodoBookResponseV2Product)
                 .SelectMany(p => p.Elements().FirstOrDefault(e => e.Name.LocalName == NodoConcepts)?
                     .Elements().Where(e => e.Name.LocalName == NodoBookResponseV2Concept) ?? Enumerable.Empty<XElement>())
-                .Select(c => c.Elements().FirstOrDefault(e => e.Name.LocalName == NodoDetails)?
-                    .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Detail))
-                .OfType<XElement>()
                 ?? Enumerable.Empty<XElement>();
         }
 
-        private static PrecioReservaDTO? CalcularPrecioReserva(IEnumerable<XElement> detalles, string nombreIntegrador)
+        private static PrecioReservaDTO? CalcularPrecioReserva(IEnumerable<XElement> conceptos, string nombreIntegrador)
         {
             decimal precioNeto = 0m;
             decimal precioVenta = 0m;
             var moneda = MonedaPorDefecto;
             var hayPrecio = false;
 
-            foreach (var detalle in detalles)
+            foreach (var concepto in conceptos)
             {
-                var taxes = detalle.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?
-                    .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+                var taxes = ObtenerTaxesConcepto(concepto);
 
                 if (taxes?.Attribute(AtributoAmount) == null)
                     continue;
@@ -1016,24 +1082,20 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 return (string.Empty, null);
             }
 
-            // Pendiente de pruebas del flujo completo: evaluar devolver BookingItemIdentifier
-            // (identificador del elemento a cancelar) como localizador en lugar del locator global.
-            //var primerProducto = result.Elements()
-            //    .FirstOrDefault(e => e.Name.LocalName == "Products")?
-            //    .Elements().FirstOrDefault(e => e.Name.LocalName == "BookResponseV2Product");
-            //
-            //var bookingItem = primerProducto?.Elements()
-            //    .FirstOrDefault(e => e.Name.LocalName == "BookingItemIdentifier")?.Value;
-            //
-            //var localizador = string.IsNullOrEmpty(bookingItem)
-            //    ? result.Attribute("TransactionIdentifier")?.Value ?? string.Empty
-            //    : bookingItem;
+            // El proveedor puede responder "Pending" con un nodo <Errors>; se registra el motivo real.
+            var erroresProveedor = ObtenerErroresProveedor(result);
+            if (erroresProveedor.Count > 0)
+            {
+                _logger.ErrorLog(peticion.Referencia, peticion.IdBusqueda, "Reserva", credencial.codigo,
+                    $"INeedTours: el proveedor rechazo el commit. {string.Join(" | ", erroresProveedor)}");
+                return (string.Empty, null);
+            }
 
             var localizador = result.Attribute(AtributoTransactionIdentifier)?.Value ?? string.Empty;
 
-            // Precio final: suma de los detalles de todos los conceptos de todos los
-            // productos (misma estructura de precios que BOOK-RS).
-            var precio = CalcularPrecioReserva(ExtraerDetallesReserva(result), credencial.nombre);
+            // Precio final: suma de los conceptos de todos los productos
+            // (Total > Taxes a nivel de concepto, misma estructura que BOOK-RS).
+            var precio = CalcularPrecioReserva(ExtraerConceptosReserva(result), credencial.nombre);
 
             return (localizador, precio);
         }
@@ -1138,51 +1200,183 @@ namespace Naideth.Traslados.Infrastructura.INeedTours
                 return null;
             }
 
-            // Precio final autoritativo del concepto. Vive en
-            // Details > BookResponseV2Detail > Total > Taxes (misma estructura que SEARCH).
-            var concepto = result.Elements()
-                .FirstOrDefault(e => e.Name.LocalName == NodoProducts)?
-                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Product)?
-                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoConcepts)?
-                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Concept);
+            // El proveedor responde "Pending" con <Errors> cuando rechaza el BOOK (ej. ConceptBookingCode invalido).
+            var erroresProveedor = ObtenerErroresProveedor(result);
+            if (erroresProveedor.Count > 0)
+            {
+                _logger.ErrorLog(peticion.Referencia, peticion.IdBusqueda, "PreReserva", credencial.codigo,
+                    $"INeedTours: el proveedor rechazo la pre-reserva. {string.Join(" | ", erroresProveedor)}");
+                return null;
+            }
 
-            var precio = ExtraerPrecioReserva(concepto);
+            var conceptos = ExtraerConceptosReserva(result).ToList();
+            var concepto = conceptos.FirstOrDefault();
+
+            var precio = ExtraerPrecioReserva(conceptos);
+
+            if (precio?.Total?.Total == 0m)
+            {
+                var detalle = DiagnosticoPrecio(result, conceptos);
+                _logger.ErrorLog(peticion.Referencia, peticion.IdBusqueda, "PreReserva", credencial.codigo,
+                    $"INeedTours: el precio de la pre-reserva llego en 0. {detalle}");
+            }
+
             var penalidades = ExtraerPenalidadesReserva(result);
 
             var duracion = Valor(concepto, "Duration");
-            var tarifaActualizada = tarifaSeleccionada with
+            var datosTarifaOriginal = tarifaSeleccionada.DatosTarifa ?? new DatosTarifaDTO();
+            var datosTarifaActualizado = new DatosTarifaDTO
             {
+                Localizador = datosTarifaOriginal.Localizador,
+                CodigoProducto = datosTarifaOriginal.CodigoProducto,
+                CodigoAuxiliar = datosTarifaOriginal.CodigoAuxiliar,
+                TipoVehiculo = datosTarifaOriginal.TipoVehiculo,
+                ModeloVehiculo = datosTarifaOriginal.ModeloVehiculo,
+                ImagenVehiculo = datosTarifaOriginal.ImagenVehiculo,
+                Flexible = datosTarifaOriginal.Flexible,
                 DuracionViaje = duracion,
+                HoraInicio = datosTarifaOriginal.HoraInicio,
                 EsperaMaxima = "10 minutos",
                 CantidadPasajeros = tarifaSeleccionada.CantidadAdultos + tarifaSeleccionada.CantidadNinos + tarifaSeleccionada.CantidadInfantes,
+                MaletasMaximas = datosTarifaOriginal.MaletasMaximas,
                 PoliticasCancelacion = penalidades.Count > 0 ? penalidades : null,
                 ConceptoReserva = Valor(concepto, NodoConceptBookingCode)
             };
-            return disponibilidadSeleccionada with
+
+            var tarifaActualizada = new TarifaDTO
             {
+                Id = tarifaSeleccionada.Id,
+                IdPreReserva = tarifaSeleccionada.IdPreReserva,
+                Category = tarifaSeleccionada.Category,
+                Nombre = tarifaSeleccionada.Nombre,
+                Beneficios = tarifaSeleccionada.Beneficios,
+                RangoEdad = tarifaSeleccionada.RangoEdad,
+                CantidadAdultos = tarifaSeleccionada.CantidadAdultos,
+                CantidadNinos = tarifaSeleccionada.CantidadNinos,
+                CantidadInfantes = tarifaSeleccionada.CantidadInfantes,
+                DatosTarifa = datosTarifaActualizado
+            };
+            return new DisponibilidadDTO
+            {
+                Source = disponibilidadSeleccionada.Source,
+                SourceName = disponibilidadSeleccionada.SourceName,
+                Id = disponibilidadSeleccionada.Id,
+                Auxiliares = disponibilidadSeleccionada.Auxiliares,
+                Plan = disponibilidadSeleccionada.Plan,
+                Duracion = disponibilidadSeleccionada.Duracion,
+                Tipo = disponibilidadSeleccionada.Tipo,
+                FechaInicio = disponibilidadSeleccionada.FechaInicio,
+                FechaSalida = disponibilidadSeleccionada.FechaSalida,
+                Imagen = disponibilidadSeleccionada.Imagen,
+                Precio = precio,
+                Tarifas = new List<TarifaDTO> { tarifaActualizada },
                 LocalizadorReserva = localizadorReserva,
                 EstadoReserva = estadoReserva,
-                EchoTokenReserva = echoTokenReserva,
-                Precio = precio,
-                Tarifas = new List<TarifaDTO> { tarifaActualizada }
+                EchoTokenReserva = echoTokenReserva
             };
         }
 
-        private static PrecioDTO ExtraerPrecioReserva(XElement? concepto)
+        private static PrecioDTO ExtraerPrecioReserva(IEnumerable<XElement> conceptos)
         {
-            var detalle = concepto?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoDetails)?
-                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Detail);
-            var taxes = detalle?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
-            var importe = taxes?.Attribute(AtributoAmount) != null ? DecimalAtributo(taxes, AtributoAmount) ?? 0m : 0m;
-            var moneda = taxes?.Attribute(AtributoCurrencyCode)?.Value ?? MonedaPorDefecto;
-            var comisiones = taxes?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoCommissions);
-            var precioVenta = DecimalElemento(comisiones, NodoSellingPrice) ?? importe;
-            var precioNeto = DecimalElemento(comisiones, NodoNetAmount) ?? precioVenta;
-            var impuesto = precioVenta - precioNeto;
-            var total = new TotalDTO(moneda, precioNeto, impuesto, precioVenta);
+            decimal precioNeto = 0m;
+            decimal precioVenta = 0m;
+            var moneda = MonedaPorDefecto;
+            var hayPrecio = false;
 
+            foreach (var concepto in conceptos)
+            {
+                var taxes = ObtenerTaxesConcepto(concepto);
+                if (taxes?.Attribute(AtributoAmount) == null)
+                    continue;
+
+                hayPrecio = true;
+
+                var importe = DecimalAtributo(taxes, AtributoAmount) ?? 0m;
+                var comisiones = taxes.Elements().FirstOrDefault(e => e.Name.LocalName == NodoCommissions);
+                var venta = DecimalElemento(comisiones, NodoSellingPrice) ?? importe;
+                var neto = DecimalElemento(comisiones, NodoNetAmount) ?? venta;
+
+                moneda = taxes.Attribute(AtributoCurrencyCode)?.Value ?? moneda;
+                precioVenta += venta;
+                precioNeto += neto;
+            }
+
+            if (!hayPrecio)
+            {
+                var totalVacio = new TotalDTO(moneda, 0m, 0m, 0m);
+                return new PrecioDTO(totalVacio, new List<PTCTotalDTO> { new PTCTotalDTO(TipoAdulto, 1, totalVacio) });
+            }
+
+            var total = new TotalDTO(moneda, precioNeto, precioVenta - precioNeto, precioVenta);
             return new PrecioDTO(total, new List<PTCTotalDTO> { new PTCTotalDTO(TipoAdulto, 1, total) });
         }
+
+        private static XElement? ObtenerTaxesConcepto(XElement? concepto)
+        {
+            // BOOK/COMMIT: Total > Taxes a nivel de concepto. Fallback al detalle
+            // (BookResponseV2Detail > Total > Taxes) por si el concepto no trae Total.
+            var totalConcepto = concepto?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal);
+            var taxesConcepto = totalConcepto?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+
+            if (taxesConcepto != null)
+                return taxesConcepto;
+
+            return concepto?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoDetails)?
+                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Detail)?
+                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?
+                .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+        }
+
+        private static List<string> ObtenerErroresProveedor(XElement result)
+        {
+            // <Errors><Error Type="N"><Code>...</Code><Description>...</Description></Error></Errors>
+            var errores = new List<string>();
+            var nodoErrors = result.Elements().FirstOrDefault(e => e.Name.LocalName == "Errors");
+
+            if (nodoErrors == null)
+                return errores;
+
+            foreach (var error in nodoErrors.Elements().Where(e => e.Name.LocalName == "Error"))
+            {
+                var codigo = error.Elements().FirstOrDefault(e => e.Name.LocalName == "Code")?.Value?.Trim();
+                var descripcion = error.Elements().FirstOrDefault(e => e.Name.LocalName == "Description")?.Value?.Trim();
+
+                if (string.IsNullOrWhiteSpace(codigo) && string.IsNullOrWhiteSpace(descripcion))
+                    continue;
+
+                errores.Add(!string.IsNullOrWhiteSpace(codigo) && !string.IsNullOrWhiteSpace(descripcion)
+                    ? $"{codigo}: {descripcion}"
+                    : codigo ?? descripcion ?? string.Empty);
+            }
+
+            return errores;
+        }
+
+        private static string DiagnosticoPrecio(XElement result, List<XElement> conceptos)
+        {
+            // Vuelca la estructura de precios real para diagnosticar por que llega en 0.
+            var partes = new List<string> { $"Concepts={conceptos.Count}" };
+
+            for (var i = 0; i < conceptos.Count; i++)
+            {
+                var c = conceptos[i];
+                var totalConcepto = c.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal);
+                var taxesConcepto = totalConcepto?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+                var detail = c.Elements().FirstOrDefault(e => e.Name.LocalName == NodoDetails)?
+                    .Elements().FirstOrDefault(e => e.Name.LocalName == NodoBookResponseV2Detail);
+                var taxesDetail = detail?.Elements().FirstOrDefault(e => e.Name.LocalName == NodoTotal)?
+                    .Elements().FirstOrDefault(e => e.Name.LocalName == NodoTaxes);
+
+                partes.Add($"C{i}=Concept:{taxesConcepto?.Attribute(AtributoAmount)?.Value ?? "null"}/{taxesConcepto?.Attribute(AtributoCurrencyCode)?.Value ?? "-"} Detail:{taxesDetail?.Attribute(AtributoAmount)?.Value ?? "null"}/{taxesDetail?.Attribute(AtributoCurrencyCode)?.Value ?? "-"}");
+            }
+
+            var xml = result.ToString(SaveOptions.DisableFormatting);
+            if (xml.Length > 1500)
+                xml = xml.Substring(0, 1500);
+
+            return $"{string.Join(" | ", partes)} || XML={xml}";
+        }
+
 
         private static List<PoliticaCancelacionDTO> ExtraerPenalidadesReserva(XElement result)
         {

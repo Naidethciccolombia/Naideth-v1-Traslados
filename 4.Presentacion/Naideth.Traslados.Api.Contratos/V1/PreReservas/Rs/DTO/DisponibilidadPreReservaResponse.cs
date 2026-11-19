@@ -27,6 +27,12 @@ namespace Naideth.Traslados.Api.Contratos.V1.PreReservas.Rs
         [JsonPropertyName("fechaSalida")]
         public required string FechaSalida { get; set; }
         [Required]
+        [JsonPropertyName("horaInicio")]
+        public required string HoraInicio { get; set; }
+        [Required]
+        [JsonPropertyName("horaSalida")]
+        public required string HoraSalida { get; set; }
+        [Required]
         [JsonPropertyName("fuente")]
         public required string Fuente { get; set; }
         [Required]

@@ -99,7 +99,7 @@ namespace Naideth.Traslados.Api.Controllers.v1.Traslado.Extensiones.Busquedas
             if (fil == null)
             {
                 return new FiltroRequestDTO(
-                    null, null, 0, null, null);
+                    null, null, 0, null, null, false);
             }
 
             var culture = CultureInfo.InvariantCulture;// new CultureInfo("es-CO");
@@ -124,9 +124,10 @@ namespace Naideth.Traslados.Api.Controllers.v1.Traslado.Extensiones.Busquedas
             return new FiltroRequestDTO(
                 precio,
                 fuentes,
-                fil.MarkUps,
+                fil.MarkUps??0,
                 fil.Ordenamiento,
-                nombres
+                nombres,
+                fil.NoFormateo ?? false
             );
 
         }

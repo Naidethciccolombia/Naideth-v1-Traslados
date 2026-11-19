@@ -28,6 +28,8 @@ using Naideth.Traslados.Infrastructura.HostedServicio;
 using Naideth.Central.Dominio.Servicios;
 using Naideth.Traslados.Aplicacion.Componentes.INeedTours.Interfaces;
 using Naideth.Traslados.Aplicacion.Componentes.INeedTours;
+using Naideth.Traslados.Aplicacion.Componentes.Civitatis.Interfaces;
+using Naideth.Traslados.Aplicacion.Componentes.Civitatis;
 namespace Naideth.Traslados.Aplicacion
 {
     public static class InyeccionDependecia
@@ -53,6 +55,7 @@ namespace Naideth.Traslados.Aplicacion
             servicios.AddScoped<ICancelacionServicio, CancelacionServicio>();
             servicios.AddScoped<IEmisionServicio, EmisionServicio>();
             servicios.AddScoped<IINeedToursServicio, INeedToursServicio>();
+            servicios.AddScoped<ICivitatisServicio, CivitatisServicio>();
 
             // ✅ INTEGRADORES (Scoped)
             //      servicios.AddScoped<ICopaServicio, CopaServicio>();

@@ -38,8 +38,12 @@ namespace Naideth.Traslados.Aplicacion.Kernel
            List<DisponibilidadDTO>? disponibilidades, 
             string monedaDestino,
             decimal markUps,
+            bool noFormateo,
             CancellationToken tokenCancelacion)
         { 
+
+            if (noFormateo)
+                return disponibilidades;
 
             if (disponibilidades == null)
                 return null;
@@ -60,8 +64,12 @@ namespace Naideth.Traslados.Aplicacion.Kernel
            ReservaResponseDTO disponibilidad, 
             string monedaDestino,
             decimal markUps,
+            bool noFormateo,
             CancellationToken tokenCancelacion)
         {
+            if (noFormateo)
+                return disponibilidad;
+
             var precio = disponibilidad.Precio;
 
             var origenMoneda = disponibilidad.Precio.Total.Moneda;
@@ -82,7 +90,7 @@ namespace Naideth.Traslados.Aplicacion.Kernel
             var sumTotal = PtcTotal.Sum(x => x.Total.Total);
 
               
-            var precios = new PrecioReservaDTO(precio.Fuente, new TotalReservaDTO(monedaDestino, sumValor, sumImpuesto, sumTotal+ sumImpuesto), PtcTotal);
+            var precios = new PrecioReservaDTO(precio.Fuente, new TotalReservaDTO(monedaDestino, sumValor, sumImpuesto, sumTotal), PtcTotal);
 
 
             return new ReservaResponseDTO(disponibilidad.Estado, disponibilidad.Localizador, precios);
@@ -100,22 +108,13 @@ namespace Naideth.Traslados.Aplicacion.Kernel
 
             var origenMoneda = disponibilidad.Precio.Total.Moneda;
 
-            // ============================================
-            // 1. CONVERSIÓN GENERAL TOTAL
-            // ============================================
+
             var baseTotal = _convercionMonedaServicio.ConvertirMoneda(disponibilidad.Precio.Total.Valor, origenMoneda, monedaDestino);
             var impTotal = _convercionMonedaServicio.ConvertirMoneda(disponibilidad.Precio.Total.Impuesto, origenMoneda, monedaDestino);
             var total = AplicarMarkUp(baseTotal, markUps);
-            // Total general convertido
-
-            // ============================================
-            // 2. CONVERSIÓN DE PTC  
-            // ============================================
-             
 
             var ptcListaConvertida = disponibilidad.Precio.PtcTotal.Select(item =>
             {
-              //  var monedaOrigPtc = item.Total.Moneda;
 
                 var baseConvertida = _convercionMonedaServicio.ConvertirMoneda(item.Total.Valor, origenMoneda, monedaDestino);
                 var impConvertida = _convercionMonedaServicio.ConvertirMoneda(item.Total.Impuesto, origenMoneda, monedaDestino);
@@ -150,30 +149,42 @@ namespace Naideth.Traslados.Aplicacion.Kernel
             var tarifas = new List<TarifaDTO>();
             foreach (var pl in disponibilidad.Tarifas)
             {
-                var upgrades = pl.Upgrades.Select(item =>
+                tarifas.Add(new TarifaDTO
                 {
-                    var baseConvertida = _convercionMonedaServicio.ConvertirMoneda(item.ValorUnitario, origenMoneda, monedaDestino);
-                    var totalConvertido = AplicarMarkUp(baseConvertida, markUps);
-                    return new UpgradesDTO(item.id, item.nombre, item.RangoEdad, baseConvertida, totalConvertido, item.PaxUpdate);
-                }).ToList();
-
-                tarifas.Add(new TarifaDTO(pl.Id, pl.IdPreReserva, pl.Category, pl.PdfCondicciones, pl.PdfDescripcion, pl.Nombre, pl.Beneficios, pl.RangoEdad, pl.CantidadAdultos, pl.CantidadNinos, pl.CantidadInfantes, upgrades));
+                    Id = pl.Id,
+                    IdPreReserva = pl.IdPreReserva,
+                    Category = pl.Category,
+                    Nombre = pl.Nombre,
+                    Beneficios = pl.Beneficios,
+                    RangoEdad = pl.RangoEdad,
+                    CantidadAdultos = pl.CantidadAdultos,
+                    CantidadNinos = pl.CantidadNinos,
+                    CantidadInfantes = pl.CantidadInfantes,
+                    DatosTarifa = pl.DatosTarifa
+                });
             }
 
 
-            return new DisponibilidadDTO(disponibilidad.Source,
-                disponibilidad.SourceName,
-                disponibilidad.Id,
-                disponibilidad.Auxiliares,
-                disponibilidad.Plan,
-                disponibilidad.Duracion,
-                disponibilidad.Tipo,
-                disponibilidad.FechaInicio,
-                disponibilidad.FechaSalida,
-                disponibilidad.Imagen,
-                new PrecioDTO(totalFinal, ptcListaConvertida.ToList()),
-                tarifas
-            );
+            return new DisponibilidadDTO
+            {
+                Source = disponibilidad.Source,
+                SourceName = disponibilidad.SourceName,
+                Id = disponibilidad.Id,
+                Auxiliares = disponibilidad.Auxiliares,
+                Plan = disponibilidad.Plan,
+                Duracion = disponibilidad.Duracion,
+                Tipo = disponibilidad.Tipo,
+                FechaInicio = disponibilidad.FechaInicio,
+                FechaSalida = disponibilidad.FechaSalida,
+                HoraInicio = disponibilidad.HoraInicio,
+                HoraSalida = disponibilidad.HoraSalida,
+                Imagen = disponibilidad.Imagen,
+                Precio = new PrecioDTO(totalFinal, ptcListaConvertida.ToList()),
+                Tarifas = tarifas,
+                LocalizadorReserva = disponibilidad.LocalizadorReserva,
+                EstadoReserva = disponibilidad.EstadoReserva,
+                EchoTokenReserva = disponibilidad.EchoTokenReserva
+            };
 
         }
 
